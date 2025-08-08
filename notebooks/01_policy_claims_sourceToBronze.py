@@ -17,11 +17,12 @@
 
 # Configure paths for Microsoft Fabric (OneLake or ADLS Gen2)
 # Update these paths to match your Fabric workspace structure
-lakehouse_name = "your_lakehouse_name"  # Replace with your actual lakehouse name
+lakehouse_id = "your_lakehouse_id"  # Replace with your actual lakehouse name
+workspace_id = "your_workspace_id"  # Replace with your actual workspace ID
 
-claims_path = f"abfss://your_workspace@onelake.dfs.fabric.microsoft.com/{lakehouse_name}/Files/data_sources/Claims"
-policy_path = f"abfss://your_workspace@onelake.dfs.fabric.microsoft.com/{lakehouse_name}/Files/data_sources/Policy/policies.csv"
-accident_path = f"abfss://your_workspace@onelake.dfs.fabric.microsoft.com/{lakehouse_name}/Files/data_sources/Accidents"
+claims_path = f"abfss://{workspace_id}@onelake.dfs.fabric.microsoft.com/{lakehouse_id}/Files/data_sources/Claims"
+policy_path = f"abfss://{workspace_id}@onelake.dfs.fabric.microsoft.com/{lakehouse_id}/Files/data_sources/Policy/policies.csv"
+accident_path = f"abfss://{workspace_id}@onelake.dfs.fabric.microsoft.com/{lakehouse_id}/Files/data_sources/Accidents"
 
 # Alternative: If using local lakehouse files
 # claims_path = "Files/data_sources/Claims"

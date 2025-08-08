@@ -59,125 +59,103 @@ print(f"   Lakehouse: {fabric_pipeline_config['parameters']['lakehouse_name']}")
 
 # COMMAND ----------
 
-# Define pipeline activities (equivalent to Databricks job tasks)
+# Updated pipeline activities to reflect current notebook set (bronze → silver → enrichment → ML → rules → gold views)
 pipeline_activities = [
     {
         "activity_name": "00_setup_validation",
         "type": "Notebook",
-        "description": "Initial setup and data validation",
-        "notebook_path": "00_setup_fabric",
-        "timeout_minutes": 30,
-        "retry_count": 2,
+        "description": "Initial setup and environment/schema validation",
+        "notebook_path": "00_README",  # optional overview / validation
+        "timeout_minutes": 15,
+        "retry_count": 1,
         "depends_on": [],
-        "parameters": {
-            "validation_mode": "full",
-            "create_schemas": True
-        }
+        "parameters": {"create_schemas": True, "validation_mode": "light"}
     },
     {
-        "activity_name": "01_policy_claims_processing", 
+        "activity_name": "01_source_to_bronze",
         "type": "Notebook",
-        "description": "Core DLT pipeline - Bronze to Silver transformation",
-        "notebook_path": "01_policy_claims_accident_fabric",
-        "timeout_minutes": 60,
-        "retry_count": 3,
+        "description": "Ingest raw policy & claims to bronze schema",
+        "notebook_path": "01_policy_claims_sourceToBronze",
+        "timeout_minutes": 40,
+        "retry_count": 2,
         "depends_on": ["00_setup_validation"],
-        "parameters": {
-            "processing_mode": "full_refresh",
-            "data_quality_checks": True
-        }
+        "parameters": {"mode": "overwrite", "data_quality_checks": True}
     },
     {
-        "activity_name": "02_exploratory_analysis",
-        "type": "Notebook", 
-        "description": "Exploratory data analysis and quality assessment",
-        "notebook_path": "02_EDA_fabric",
+        "activity_name": "02_bronze_to_silver",
+        "type": "Notebook",
+        "description": "Normalize & conform policy / claim data to silver schema",
+        "notebook_path": "02_policy_claims_bronzeToSilver",
         "timeout_minutes": 45,
         "retry_count": 2,
-        "depends_on": ["01_policy_claims_processing"],
-        "parameters": {
-            "generate_reports": True,
-            "profiling_enabled": True
-        }
-    },
-    {
-        "activity_name": "04a_geocoding_enhancement",
-        "type": "Notebook",
-        "description": "Add latitude/longitude coordinates to claims",
-        "notebook_path": "04a_policy_location_fabric", 
-        "timeout_minutes": 90,
-        "retry_count": 2,
-        "depends_on": ["01_policy_claims_processing"],
-        "parameters": {
-            "batch_size": 100,
-            "rate_limit_delay": 1.0,
-            "geocoding_provider": "nominatim"
-        }
+        "depends_on": ["01_source_to_bronze"],
+        "parameters": {"optimize": True}
     },
     {
         "activity_name": "03_iot_telematics",
         "type": "Notebook",
-        "description": "Process IoT telematics data from parquet files", 
-        "notebook_path": "03_iot_fabric",
-        "timeout_minutes": 60,
-        "retry_count": 2, 
-        "depends_on": ["02_exploratory_analysis"],
-        "parameters": {
-            "optimize_tables": True,
-            "partition_strategy": "date"
-        }
-    },
-    {
-        "activity_name": "05_severity_prediction",
-        "type": "Notebook",
-        "description": "AI-powered damage assessment from accident images",
-        "notebook_path": "05_severity_prediction_fabric",
-        "timeout_minutes": 75,
-        "retry_count": 2,
-        "depends_on": ["02_exploratory_analysis"], 
-        "parameters": {
-            "model_version": "v1.0",
-            "prediction_threshold": 0.5,
-            "batch_processing": True
-        }
-    },
-    {
-        "activity_name": "04b_data_integration", 
-        "type": "Notebook",
-        "description": "Integrate all data sources for comprehensive view",
-        "notebook_path": "04b_policy_claims_accident_iot_fabric",
+        "description": "Ingest & cleanse telematics parquet to bronze/silver",
+        "notebook_path": "03_iot",
         "timeout_minutes": 45,
         "retry_count": 2,
-        "depends_on": [
-            "04a_geocoding_enhancement",
-            "03_iot_telematics", 
-            "05_severity_prediction"
-        ],
-        "parameters": {
-            "join_strategy": "broadcast",
-            "quality_validation": True
-        }
+        "depends_on": ["02_bronze_to_silver"],
+        "parameters": {"partition": "ingestion_date"}
     },
     {
-        "activity_name": "06_business_rules",
-        "type": "Notebook", 
-        "description": "Apply dynamic business rules for automated decisions",
-        "notebook_path": "06_rule_fabric",
-        "timeout_minutes": 30,
+        "activity_name": "04_location_enrichment",
+        "type": "Notebook",
+        "description": "Geo enrichment (zipcode → lat/long) for claim/policy join",
+        "notebook_path": "04_policy_location",
+        "timeout_minutes": 50,
         "retry_count": 2,
-        "depends_on": ["04b_data_integration"],
-        "parameters": {
-            "rules_version": "latest",
-            "auto_approval_enabled": True,
-            "audit_logging": True
-        }
+        "depends_on": ["02_bronze_to_silver"],
+        "parameters": {"batch_size": 100, "rate_limit_delay": 1.0}
+    },
+    {
+        "activity_name": "05a_images_bronze_ingest",
+        "type": "Notebook",
+        "description": "Accident image metadata & binary ingestion to bronze",
+        "notebook_path": "05a_accident_images_bronze_fabric",
+        "timeout_minutes": 60,
+        "retry_count": 2,
+        "depends_on": ["01_source_to_bronze"],
+        "parameters": {"optimize_after_write": True}
+    },
+    {
+        "activity_name": "05b_severity_prediction",
+        "type": "Notebook",
+        "description": "Incremental ML severity scoring producing silver_accident",
+        "notebook_path": "05b_severity_prediction_bronzeToSilver",
+        "timeout_minutes": 90,
+        "retry_count": 2,
+        "depends_on": ["05a_images_bronze_ingest"],
+        "parameters": {"force_incremental": True, "include_content": False}
+    },
+    {
+        "activity_name": "06_rules_engine",
+        "type": "Notebook",
+        "description": "Apply business rules and persist gold.gold_insights",
+        "notebook_path": "06_rules_engine",
+        "timeout_minutes": 35,
+        "retry_count": 2,
+        "depends_on": ["04_location_enrichment", "05b_severity_prediction", "03_iot_telematics"],
+        "parameters": {"rules_version": "latest", "audit_logging": True}
+    },
+    {
+        "activity_name": "07_gold_views_materialization",
+        "type": "Notebook",
+        "description": "Create gold star-schema materialized views & dashboard aggregates",
+        "notebook_path": "07_policy_claims_accident_Goldviews",  # SQL / notebook hybrid
+        "timeout_minutes": 30,
+        "retry_count": 1,
+        "depends_on": ["06_rules_engine"],
+        "parameters": {"refresh_mode": "full"}
     }
 ]
 
-print(f"📊 Pipeline Activities Defined: {len(pipeline_activities)}")
-for activity in pipeline_activities:
-    deps = len(activity['depends_on'])
-    print(f"   {activity['activity_name']}: {deps} dependencies")
+print("🔁 Updated Pipeline Activities (new notebook set):")
+for act in pipeline_activities:
+    print(f"   - {act['activity_name']} (depends: {len(act['depends_on'])})")
 
 # COMMAND ----------
 
@@ -197,14 +175,18 @@ data_paths = {
         "metadata": "Files/data_sources/Accidents/image_metadata.csv"
     },
     "delta_tables": {
-        "bronze_claims": "Tables/bronze_claims",
-        "bronze_policies": "Tables/bronze_policies", 
-        "bronze_accident": "Tables/bronze_accident",
-        "silver_claim_policy": "Tables/silver_claim_policy",
-        "silver_claim_policy_location": "Tables/silver_claim_policy_location",
-        "silver_telematics": "Tables/silver_telematics",
-        "silver_accident": "Tables/silver_accident", 
-        "gold_claims_final": "Tables/gold_claims_final"
+        "bronze_claim": "Tables/bronze/bronze_claim",
+        "bronze_policy": "Tables/bronze/bronze_policy",
+        "bronze_accident": "Tables/bronze/bronze_accident",
+        "bronze_images": "Tables/bronze/bronze_images",
+        "silver_claim": "Tables/silver/silver_claim",
+        "silver_policy": "Tables/silver/silver_policy",
+        "silver_claim_policy": "Tables/silver/silver_claim_policy",
+        "silver_claim_policy_location": "Tables/silver/silver_claim_policy_location",
+        "silver_telematics": "Tables/silver/silver_telematics",
+        "silver_accident": "Tables/silver/silver_accident",
+        "silver_claim_policy_accident": "Tables/silver/silver_claim_policy_accident",
+        "gold_insights": "Tables/gold/gold_insights"
     },
     "checkpoints": "Files/pipeline_checkpoints/",
     "logs": "Files/pipeline_logs/"

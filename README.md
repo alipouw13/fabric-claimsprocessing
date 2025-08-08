@@ -47,7 +47,6 @@ root/
     02_policy_claims_bronzeToSilver.py    Bronze → Silver normalization & conformance
     03_iot.py                             Telematics / IoT ingestion simulation (optional streaming stub)
     04_policy_location.py                 Geospatial enrichment (zipcode → lat/long)
-    05_import_model.py                    Utility to import / register ML model artifact
     05a_accident_images_bronze_fabric.py  Accident image metadata & content ingestion to Bronze
     05b_severity_prediction_silver_fabric.py  Chunked ML severity scoring & Silver accident table build
     06_rule.py                            Base rule application / transformations
@@ -79,12 +78,13 @@ Partitioning & Incremental Strategy:
 3. (Optional / Sim) Run `03_iot.py` for telematics ingestion (batch or simulated stream stub).
 4. Execute `02_policy_claims_bronzeToSilver.py` to standardize & enrich core policy/claim entities into Silver.
 5. Run `04_policy_location.py` for location (geo) enrichment.
-6. Run `05_import_model.py` if deploying a real severity model (MLflow import / registration).
-7. Execute `05b_severity_prediction_silver_fabric.py` for incremental severity scoring & Silver accident enrichment.
-8. Apply rules via `06_rules_engine.py` (produces flags / risk metrics).
-9. Create / refresh analytic views with `07_policy_claims_accident_views.sql` (serving / Gold alignment).
-10. Publish Power BI model (Direct Lake) or replicate selected views to Fabric SQL DB.
-11. Schedule notebooks / SQL in a Fabric Pipeline; add monitoring & alerting.
+6. Execute `05b_severity_prediction_silver_fabric.py` for incremental severity scoring & Silver accident enrichment.
+7. Apply rules via `06_rules_engine.py` (produces flags / risk metrics).
+8. Create / refresh analytic views with `07_policy_claims_accident_views.sql` (serving / Gold alignment).
+9. Publish Power BI model (Direct Lake) or replicate selected views to Fabric SQL DB.
+10. Schedule notebooks / SQL in a Fabric Pipeline; add monitoring & alerting.
+
+(Note: Real ML model registry import script reference removed; integrate your enterprise model registration process separately if needed.)
 
 ## 6. ML & Rules Enrichment
 Severity Model:
@@ -199,8 +199,7 @@ Leverage `gold.v_claims_summary_by_risk` for high-level cards; Direct Lake will 
 7. Execute `05b_severity_prediction_silver_fabric.py` – verify incremental severity population
 8. Run `06_rule.py` to apply rules & produce Gold insights
 9. Build Power BI report (Direct Lake) pointing to Gold layer
-10. (Optional) Register real model & swap inference logic
-11. Configure Pipeline schedule (daily/hourly) & alerts
+10. Configure Pipeline schedule (daily/hourly) & alerts
 
 ## 12. Operational Considerations
 | Aspect | Approach |
@@ -223,7 +222,7 @@ Leverage `gold.v_claims_summary_by_risk` for high-level cards; Direct Lake will 
 Steps:
 1. Log model run with MLflow in Fabric notebook
 2. Register to model registry (e.g., `damage_severity_model`)
-3. Update config: `use_simulated_predictions=False`
+3. Update config/inference UDF in severity prediction notebook
 4. Use `mlflow.pyfunc.load_model()` (batch) or `spark_udf` for distributed inference
 5. Add monitoring notebook for drift (compare severity distribution month over month)
 

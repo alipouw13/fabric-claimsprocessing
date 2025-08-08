@@ -5,6 +5,8 @@
 # COMMAND ----------
 
 # Install geopy for geocoding
+# NOTE: Attach your lakehouse to this notebook to ensure no errors
+
 import subprocess
 import sys
 

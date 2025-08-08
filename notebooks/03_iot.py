@@ -5,9 +5,10 @@
 # COMMAND ----------
 
 # Option 2: If data is in external storage (OneLake/ADLS Gen2)
-lakehouse_name = "your_lakehouse_name"
-workspace_name = "your_workspace_name"
-telematics_path = f"abfss://{workspace_name}@onelake.dfs.fabric.microsoft.com/{lakehouse_name}/Files/data_sources/Telematics"
+# NOTE: Attach your lakehouse to this notebook to ensure no errors
+lakehouse_id = "your_lakehouse_id"
+workspace_id = "your_workspace_id"
+telematics_path = f"abfss://{workspace_id}@onelake.dfs.fabric.microsoft.com/{lakehouse_id}/Files/telematics"
 
 print(f"Telematics data path: {telematics_path}")
 
@@ -61,6 +62,36 @@ except Exception as e:
 # MAGIC ## Read and Examine Parquet Data
 
 # COMMAND ----------
+
+# Define schemas
+bronze = "bronze"
+silver = "silver"
+for _sch in [bronze, silver]:
+    try:
+        spark.sql(f"CREATE SCHEMA IF NOT EXISTS {_sch}")
+    except Exception as e:
+        logger.warning(f"Schema init warning for {_sch}: {e}")
+
+# COMMAND ----------
+
+# Adjust writer to target silver schema (unless already qualified)
+
+def write_delta_table(df, table_name, mode="overwrite", optimize=True):
+    """Write DataFrame to Delta in silver schema (idempotent)."""
+    try:
+        fq_name = table_name if "." in table_name else f"{silver}.{table_name}"
+        (df.write
+           .format("delta")
+           .mode(mode)
+           .option("overwriteSchema", "true")
+           .saveAsTable(fq_name))
+        if optimize:
+            spark.sql(f"OPTIMIZE {fq_name}")
+            logger.info(f"Table {fq_name} created and optimized successfully")
+        return True
+    except Exception as e:
+        logger.error(f"Error writing table {table_name}: {e}")
+        return False
 
 # Read a sample of the parquet data to understand the schema
 print("Reading parquet files to examine schema and data...")
@@ -361,25 +392,4 @@ try:
     for col_name in telematics_table.columns:
         if col_name not in ["telematics_id", "ingestion_timestamp", "ingestion_date", "source_file"]:
             null_count = telematics_table.filter(F.col(col_name).isNull()).count()
-            null_percentage = (null_count / total_records) * 100 if total_records > 0 else 0
-            
-            quality_report["null_counts"][col_name] = null_count
-            quality_report["data_completeness"][col_name] = f"{100 - null_percentage:.1f}%"
-    
-    print(f"\n📋 Data Quality Report:")
-    print(f"Table: {quality_report['table_name']}")
-    print(f"Total Records: {quality_report['total_records']:,}")
-    print(f"Last Updated: {quality_report['ingestion_timestamp']}")
-    
-    print(f"\n📊 Data Completeness by Column:")
-    for col, completeness in quality_report["data_completeness"].items():
-        print(f"  {col}: {completeness}")
-    
-    # You could save this report to a monitoring table for tracking over time
-    # quality_df = spark.createDataFrame([quality_report])
-    # quality_df.write.format("delta").mode("append").saveAsTable("data_quality_reports")
-    
-except Exception as e:
-    logger.error(f"Error setting up data quality monitoring: {str(e)}")
-
-print("\n✅ Data quality monitoring setup completed")
+            null_percentage = (null_count / total_records) * 100 if total_records > 0

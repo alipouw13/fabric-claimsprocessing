@@ -1,6 +1,7 @@
 # Microsoft Fabric notebook source
 # This notebook has been adapted from the original Databricks version
 # Available at https://github.com/databricks-industry-solutions/smart-claims
+# NOTE: Attach your lakehouse to this notebook to ensure no errors
 
 # COMMAND ----------
 

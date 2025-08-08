@@ -1,5 +1,6 @@
 # Microsoft Fabric notebook source
 # run import_model.py first
+# NOTE: Attach your lakehouse to this notebook to ensure no errors
 
 # Configuration for ML processing
 ml_config = {

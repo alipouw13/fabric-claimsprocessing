@@ -1,4 +1,5 @@
 # Configure paths for accident images and metadata
+# NOTE: Attach your lakehouse to this notebook to ensure no errors
 # Update these paths based on your lakehouse structure
 accidents_path = "Files/data_sources/Accidents"
 metadata_path = "Files/data_sources/Accidents/image_metadata.csv"

@@ -1,5 +1,4 @@
 # Microsoft Fabric notebook source
-# run import_model.py first
 # NOTE: Attach your lakehouse to this notebook to ensure no errors
 
 # Configuration for ML processing
@@ -25,7 +24,13 @@ ml_config = {
     # NEW: control flags
     "force_incremental": True,                 # Always use incremental path to avoid CTAS OOM
     "small_path_row_limit": 1_000_000,         # If force_incremental False, still cap small path
-    "include_content_in_silver": False         # Drop binary content to reduce row size
+    "include_content_in_silver": False,         # Drop binary content to reduce row size
+    # NEW small dataset chunking parameters
+    "small_dataset_target_chunks": 5,          # Aim for this many chunks when total < chunk_size_min
+    "small_dataset_min_chunk": 2_000,          # Minimum rows per chunk for small datasets
+    "reset_progress_on_overshoot": True,
+    # NEW safety flag to force restart if target table is empty or missing
+    "force_reset_on_empty_table": True
 }
 
 print(f"🤖 ML Configuration:")
@@ -734,13 +739,22 @@ def process_chunk(base_df, start_rn, end_rn, chunk_id, prediction_threshold):
 def optimized_large_write(bronze_df, prediction_threshold):
     total = bronze_df.count()
     chunk_size = ml_config["chunk_size_primary"]
-    # Adjust for very small or moderately small datasets to avoid single huge chunk
-    if total < chunk_size:
+    # Derive chunk size for small datasets to still exercise incremental flow
+    if total < ml_config["chunk_size_min"]:
+        target_chunks = max(1, ml_config.get("small_dataset_target_chunks", 5))
+        # Compute provisional chunk size aiming for target_chunks
+        provisional = max(ml_config.get("small_dataset_min_chunk", 2000), math.ceil(total / target_chunks))
+        # Ensure we don't exceed original min (keep smaller for more chunks) & not below 1
+        chunk_size = max(1, provisional)
+    elif total < chunk_size:
+        # Medium dataset below primary chunk size but above min threshold
         chunk_size = max(ml_config["chunk_size_min"], min(chunk_size, total))
+    # Additional scaling for very large volumes
     if total > 50_000_000:
         chunk_size = 300_000
     elif total > 30_000_000:
         chunk_size = 400_000
+
     include_content = ml_config.get("include_content_in_silver", False)
     base_keep = ["image_name", "path", "claim_no", "loaded_timestamp"]
     if include_content:
@@ -750,14 +764,32 @@ def optimized_large_write(bronze_df, prediction_threshold):
     window_spec = Window.orderBy("image_name")
     indexed = base_df.withColumn("_rn", F.row_number().over(window_spec))
 
-    num_chunks = math.ceil(total / chunk_size)
+    num_chunks = max(1, math.ceil(total / chunk_size))
     print(f"🧩 Incremental processing: {total:,} rows in {num_chunks} chunks of ~{chunk_size:,}")
 
-    # Progress checkpoint
+    # Determine existing target table state for safety reset
+    existing_rows = 0
+    try:
+        if spark.catalog.tableExists(silver_accident):
+            existing_rows = spark.table(silver_accident).count()
+    except Exception:
+        existing_rows = 0
+
+    # Progress checkpoint handling
     progress_path = ml_config["progress_checkpoint_path"]
     progress = load_progress(progress_path)
     last_done = progress.get("last_completed_chunk", 0)
-    if last_done > 0:
+
+    # Safety reset conditions
+    if (ml_config.get("force_reset_on_empty_table", True) and existing_rows == 0 and last_done > 0):
+        print(f"⚠️ Progress indicated chunk {last_done} done, but target table is empty; resetting to chunk 0.")
+        last_done = 0
+        save_progress(progress_path, {"last_completed_chunk": 0, "reset_due_to_empty_table": True, "total": total})
+    elif last_done >= num_chunks and ml_config.get("reset_progress_on_overshoot", True):
+        print(f"⚠️ Progress checkpoint ({last_done}) >= total chunks ({num_chunks}); resetting progress.")
+        last_done = 0
+        save_progress(progress_path, {"last_completed_chunk": 0, "reset_due_to_overshoot": True, "total": total})
+    elif last_done > 0:
         print(f"🔁 Resuming from chunk {last_done+1}")
 
     start_time_overall = time.time()
@@ -770,43 +802,51 @@ def optimized_large_write(bronze_df, prediction_threshold):
         t0 = time.time()
         try:
             chunk_df = process_chunk(indexed, start_rn, end_rn, chunk_id, prediction_threshold)
-            # Repartition per chunk
             est_partitions = min(ml_config["max_partitions_per_chunk"], max(1, (end_rn - start_rn + 1) // 200_000))
             chunk_df = chunk_df.repartition(est_partitions, "partition_date")
+            persisted = False
             try:
                 (chunk_df.write
                     .format("delta")
                     .mode("append")
                     .option("mergeSchema", "true")
                     .saveAsTable(silver_accident))
+                persisted = True
             except Exception as pw_err:
                 msg = str(pw_err)
                 if "partitioning does not match" in msg:
-                    print("🛠 Detected partition mismatch at write time; repairing table definition via DDL ...")
+                    print("🛠 Partition mismatch detected; recreating table DDL and retrying chunk write ...")
                     create_empty_silver(bronze_df)
                     (chunk_df.write
                         .format("delta")
                         .mode("append")
                         .option("mergeSchema", "true")
                         .saveAsTable(silver_accident))
+                    persisted = True
                 else:
                     raise
+            if not persisted:
+                raise RuntimeError("Chunk write did not persist and no retry path executed")
+            # Validate persistence (especially critical for first chunk)
+            written_rows = spark.table(silver_accident).filter(col("chunk_id") == chunk_id).count()
+            if written_rows == 0:
+                raise RuntimeError(f"Post-write validation failed: 0 rows found for chunk_id={chunk_id}")
             duration = time.time() - t0
             rows = end_rn - start_rn + 1
-            print(f"   ✅ Chunk {chunk_id} written ({rows:,} rows) in {duration:.1f}s ({rows/duration:,.0f} rows/s)")
+            print(f"   ✅ Chunk {chunk_id} written ({rows:,} rows; validated {written_rows:,}) in {duration:.1f}s ({rows/max(duration,0.1):,.0f} rows/s)")
             success_chunks += 1
             save_progress(progress_path, {"last_completed_chunk": chunk_id, "total": total, "chunk_size": chunk_size})
-
-            # Light adaptive back-off if chunk took too long
-            if duration > 180 and chunk_size > ml_config["chunk_size_min"]:
-                chunk_size = max(ml_config["chunk_size_min"], chunk_size // 2)
-                num_chunks = math.ceil((total - end_rn) / chunk_size) + chunk_id  # adjust remaining
-                print(f"   🔧 Adjusted future chunk_size to {chunk_size:,}; new total chunks ≈ {num_chunks}")
+            # Adaptive back-off
+            if duration > 180 and chunk_size > ml_config["small_dataset_min_chunk"]:
+                chunk_size = max(ml_config["small_dataset_min_chunk"], chunk_size // 2)
+                remaining = total - end_rn
+                if remaining > 0:
+                    num_chunks = chunk_id + math.ceil(remaining / chunk_size)
+                    print(f"   🔧 Back-off: future chunk_size -> {chunk_size:,}; new total chunks ≈ {num_chunks}")
         except Exception as ce:
             print(f"   ❌ Chunk {chunk_id} failed: {ce}")
             print("   🔁 Reducing chunk size and retrying once")
-            # Retry with half chunk size (recursive style without infinite loop)
-            retry_size = max(ml_config["chunk_size_min"], (end_rn - start_rn + 1) // 2)
+            retry_size = max(ml_config.get("small_dataset_min_chunk", 2000), (end_rn - start_rn + 1) // 2)
             try:
                 retry_end = start_rn + retry_size - 1
                 retry_df = process_chunk(indexed, start_rn, retry_end, chunk_id, prediction_threshold)
@@ -816,13 +856,15 @@ def optimized_large_write(bronze_df, prediction_threshold):
                     .mode("append")
                     .option("mergeSchema", "true")
                     .saveAsTable(silver_accident))
-                print(f"   ✅ Partial retry wrote rows {start_rn:,}-{retry_end:,}")
+                retry_written = spark.table(silver_accident).filter(col("chunk_id") == chunk_id).count()
+                if retry_written == 0:
+                    raise RuntimeError(f"Retry persistence validation failed for chunk {chunk_id}")
+                print(f"   ✅ Partial retry wrote rows {start_rn:,}-{retry_end:,} (validated {retry_written:,})")
                 save_progress(progress_path, {"last_completed_chunk": chunk_id, "partial": True, "retry_rows": retry_size})
             except Exception as retry_err:
                 print(f"   💥 Retry failed: {retry_err} - skipping chunk")
                 save_progress(progress_path, {"last_completed_chunk": chunk_id - 1, "skipped": chunk_id})
                 continue
-
     total_dur = time.time() - start_time_overall
     print(f"🏁 Incremental processing finished. Successful chunks: {success_chunks}/{num_chunks}. Total time {total_dur/60:.1f} min")
 
@@ -1042,30 +1084,28 @@ print("SILVER LAYER PROCESSING SUMMARY")
 print("="*60)
 
 try:
-    # Final statistics
-    bronze_accident = spark.table("bronze_accident")
-    silver_accident = spark.table("silver_accident")
-    
-    bronze_count = bronze_accident.count()
-    silver_count = silver_accident.count()
-    
+    # Use existing DataFrame for bronze (bronze_accident variable now holds DataFrame) and load silver table by name
+    bronze_count = bronze_accident.count() if 'bronze_accident' in globals() else spark.table(f"{bronze}.bronze_accident").count()
+    silver_df = spark.table(silver_accident)
+    silver_count = silver_df.count()
+
     print(f"📊 Processing Results:")
     print(f"   Bronze records: {bronze_count:,}")
     print(f"   Silver records: {silver_count:,}")
     if bronze_count > 0:
         print(f"   Processing success rate: {(silver_count/bronze_count)*100:.1f}%")
-    predictions_made = silver_accident.filter(col("severity").isNotNull()).count()
+    predictions_made = silver_df.filter(col("severity").isNotNull()).count()
     print(f"\n🤖 ML Processing:")
     print(f"   Predictions generated: {predictions_made:,}")
     print(f"   Model version: {ml_config['model_version']}")
     print(f"   Prediction method: {'Simulated' if ml_config['use_simulated_predictions'] else 'Real ML Model'}")
-    high_severity = silver_accident.filter(col("high_severity_flag") == True).count()
+    high_severity = silver_df.filter(col("high_severity_flag") == True).count()
     print(f"\n💼 Business Value:")
     print(f"   High severity cases identified: {high_severity:,}")
     print(f"   Automated risk assessment: ✅ Complete")
     print(f"   Data-driven decision support: ✅ Ready")
     print(f"\n💾 Tables Created:")
-    print(f"   • silver_accident (partitioned by partition_date)")
+    print(f"   • {silver_accident} (partitioned by partition_date)")
     print(f"   • Columns: severity, severity_category, high_severity_flag, data_quality_score")
     print(f"\n🔗 Next Steps:")
     print(f"   1. Join with claims/policies for gold layer")

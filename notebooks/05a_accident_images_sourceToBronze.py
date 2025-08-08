@@ -1,8 +1,12 @@
 # Configure paths for accident images and metadata
 # NOTE: Attach your lakehouse to this notebook to ensure no errors
 # Update these paths based on your lakehouse structure
-accidents_path = "Files/data_sources/Accidents"
-metadata_path = "Files/data_sources/Accidents/image_metadata.csv"
+
+lakehouse_id = "your_lakehouse_id"  # Replace with your actual lakehouse ID
+workspace_id = "your_workspace_id"
+
+accidents_path = f"abfss://{workspace_id}@onelake.dfs.fabric.microsoft.com/{lakehouse_id}/Files/accidents"
+metadata_path = f"abfss://{workspace_id}@onelake.dfs.fabric.microsoft.com/{lakehouse_id}/Files/accidents/image_metadata.csv"
 
 # Bronze schema configuration
 bronze = "bronze"

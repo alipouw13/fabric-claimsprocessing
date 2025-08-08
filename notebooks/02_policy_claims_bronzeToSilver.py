@@ -81,26 +81,32 @@ def apply_data_quality_checks(df, expectations, drop_invalid=True):
 
 # COMMAND ----------
 
-def write_delta_table(df, table_name, mode="overwrite", optimize=True):
-    """
-    Write DataFrame to Delta table with optimization
-    """
+# Define schemas
+bronze = "bronze"
+silver = "silver"
+for _sch in [bronze, silver]:
     try:
-        # Write to Delta table
-        df.write \
-          .format("delta") \
-          .mode(mode) \
-          .option("overwriteSchema", "true") \
-          .saveAsTable(table_name)
-        
-        # Optimize the table
+        spark.sql(f"CREATE SCHEMA IF NOT EXISTS {_sch}")
+    except Exception as e:
+        logger.warning(f"Schema init warning for {_sch}: {e}")
+
+# Adjust writer to target silver schema (unless already qualified)
+
+def write_delta_table(df, table_name, mode="overwrite", optimize=True):
+    """Write DataFrame to Delta in silver schema (idempotent)."""
+    try:
+        fq_name = table_name if "." in table_name else f"{silver}.{table_name}"
+        (df.write
+           .format("delta")
+           .mode(mode)
+           .option("overwriteSchema", "true")
+           .saveAsTable(fq_name))
         if optimize:
-            spark.sql(f"OPTIMIZE {table_name}")
-            logger.info(f"Table {table_name} created and optimized successfully")
-        
+            spark.sql(f"OPTIMIZE {fq_name}")
+            logger.info(f"Table {fq_name} created and optimized successfully")
         return True
     except Exception as e:
-        logger.error(f"Error writing table {table_name}: {str(e)}")
+        logger.error(f"Error writing table {table_name}: {e}")
         return False
 
 
@@ -114,7 +120,7 @@ def create_silver_policy():
         logger.info("Creating silver_policy table...")
         
         # Read bronze policy data
-        staged_policy = spark.table("bronze_policy")
+        staged_policy = spark.table(f"{bronze}.bronze_policy")
         
         # Apply transformations
         silver_policy = staged_policy.withColumn("premium", F.abs(F.col("premium"))) \
@@ -165,7 +171,7 @@ def create_silver_claim():
         logger.info("Creating silver_claim table...")
         
         # Read bronze claim data
-        staged_claim = spark.table("bronze_claim")
+        staged_claim = spark.table(f"{bronze}.bronze_claim")
         
         # Flatten nested structures
         curated_claim = flatten(staged_claim)
@@ -223,8 +229,8 @@ def create_silver_claim_policy():
         logger.info("Creating silver_claim_policy table...")
         
         # Read silver tables
-        silver_claim = spark.table("silver_claim")
-        silver_policy = spark.table("silver_policy")
+        silver_claim = spark.table(f"{silver}.silver_claim")
+        silver_policy = spark.table(f"{silver}.silver_policy")
         
         # Rename conflicting columns in policy table to avoid duplicates
         policy_renamed = silver_policy \
@@ -278,9 +284,9 @@ print("DATA PIPELINE EXECUTION SUMMARY")
 print("="*50)
 
 tables_info = [
-    ("silver_claim", "Curated and validated claims data"),
-    ("silver_policy", "Curated and validated policy data"),
-    ("silver_claim_policy", "Joined claims and policy data")
+    (f"{silver}.silver_claim", "Curated and validated claims data"),
+    (f"{silver}.silver_policy", "Curated and validated policy data"),
+    (f"{silver}.silver_claim_policy", "Joined claims and policy data")
 ]
 
 for table_name, description in tables_info:
@@ -297,4 +303,4 @@ print("Pipeline execution completed!")
 
 # Display sample data from the final joined table
 print("\nSample data from silver_claim_policy table:")
-display(spark.table("silver_claim_policy").limit(10))
+display(spark.table(f"{silver}.silver_claim_policy").limit(10))

@@ -70,12 +70,28 @@ print("✅ Libraries imported successfully")
 
 # COMMAND ----------
 
+# === Schema configuration ===
+bronze = "bronze"
+silver = "silver"
+try:
+    spark.sql(f"CREATE SCHEMA IF NOT EXISTS {bronze}")
+    spark.sql(f"CREATE SCHEMA IF NOT EXISTS {silver}")
+    print(f"✅ Ensured schemas '{bronze}' and '{silver}' exist")
+except Exception as schema_err:
+    print(f"⚠️ Schema creation issue: {schema_err}")
+
+bronze_accident = f"{bronze}.bronze_accident"
+bronze_images = f"{bronze}.bronze_images"
+silver_accident = f"{silver}.silver_accident"
+
+# COMMAND ----------
+
 print("🥉 Loading bronze accident data...")
 
 try:
-    # Load bronze tables
-    bronze_accident = spark.table("bronze_accident")
-    bronze_images = spark.table("bronze_images")
+    # Load bronze tables (schema-qualified)
+    bronze_accident = spark.table(bronze_accident)
+    bronze_images = spark.table(bronze_images)
     
     bronze_count = bronze_accident.count()
     images_count = bronze_images.count()
@@ -624,14 +640,14 @@ from pyspark.sql.types import DoubleType
 from pyspark.sql.functions import udf
 severity_udf = udf(simulate_severity_prediction, DoubleType())
 
-def create_empty_silver_schema(bronze_df):
+def create_empty_silver(bronze_df):
     """Create (or recreate) an empty partitioned silver_accident Delta table using explicit DDL.
     Writing an empty DataFrame with partitionBy can lose partition metadata in some environments,
     causing subsequent append errors: 'provided partitioning does not match'.
     This function derives a minimal schema from bronze and adds ML enrichment columns.
     """
     print("🧱 (Re)creating silver_accident table via explicit DDL ...")
-    spark.sql("DROP TABLE IF EXISTS silver_accident")
+    spark.sql(f"DROP TABLE IF EXISTS {silver_accident}")
 
     include_content = ml_config.get("include_content_in_silver", False)
     # Allowed bronze source columns we keep
@@ -672,16 +688,16 @@ def create_empty_silver_schema(bronze_df):
 
     ddl_cols = ",\n  ".join(column_defs + enrichment_defs + ["partition_date STRING"])
     ddl = f"""
-    CREATE TABLE silver_accident (
+    CREATE TABLE {silver_accident} (
       {ddl_cols}
     )
     USING DELTA
     PARTITIONED BY (partition_date)
     """
     spark.sql(ddl)
-    print("✅ Created partitioned table silver_accident (partition_date)")
+    print(f"✅ Created partitioned table {silver_accident} (partition_date)")
     # Verify partitioning
-    part_info = spark.sql("DESCRIBE DETAIL silver_accident").select("partitionColumns").collect()[0][0]
+    part_info = spark.sql(f"DESCRIBE DETAIL {silver_accident}").select("partitionColumns").collect()[0][0]
     print(f"🔍 Partition columns registered: {part_info}")
 
 def process_chunk(base_df, start_rn, end_rn, chunk_id, prediction_threshold):
@@ -761,17 +777,17 @@ def optimized_large_write(bronze_df, prediction_threshold):
                     .format("delta")
                     .mode("append")
                     .option("mergeSchema", "true")
-                    .saveAsTable("silver_accident"))
+                    .saveAsTable(silver_accident))
             except Exception as pw_err:
                 msg = str(pw_err)
                 if "partitioning does not match" in msg:
                     print("🛠 Detected partition mismatch at write time; repairing table definition via DDL ...")
-                    create_empty_silver_schema(bronze_df)
+                    create_empty_silver(bronze_df)
                     (chunk_df.write
                         .format("delta")
                         .mode("append")
                         .option("mergeSchema", "true")
-                        .saveAsTable("silver_accident"))
+                        .saveAsTable(silver_accident))
                 else:
                     raise
             duration = time.time() - t0
@@ -798,7 +814,7 @@ def optimized_large_write(bronze_df, prediction_threshold):
                     .format("delta")
                     .mode("append")
                     .option("mergeSchema", "true")
-                    .saveAsTable("silver_accident"))
+                    .saveAsTable(silver_accident))
                 print(f"   ✅ Partial retry wrote rows {start_rn:,}-{retry_end:,}")
                 save_progress(progress_path, {"last_completed_chunk": chunk_id, "partial": True, "retry_rows": retry_size})
             except Exception as retry_err:
@@ -816,7 +832,7 @@ try:
     use_incremental = ml_config.get("force_incremental", False) or bronze_count_est > ml_config.get("small_path_row_limit", 1_000_000)
     if use_incremental:
         print(f"⚙️ Using incremental chunked pipeline (rows={bronze_count_est:,})")
-        create_empty_silver_schema(bronze_accident)
+        create_empty_silver(bronze_accident)
         optimized_large_write(bronze_accident, ml_config["prediction_threshold"])
     else:
         print(f"📉 Small dataset path selected (rows={bronze_count_est:,})")
@@ -842,14 +858,14 @@ try:
         )
         if not ml_config.get("include_content_in_silver", False) and "content" in silver_accident_df.columns:
             silver_accident_df = silver_accident_df.drop("content")
-        print("💾 Writing small dataset to Delta (overwrite mode)...")
+        print(f"💾 Writing small dataset to Delta (overwrite mode)...")
         (silver_accident_df.write
          .format("delta")
          .mode("overwrite")
          .option("overwriteSchema", "true")
          .partitionBy("partition_date")
-         .saveAsTable("silver_accident"))
-        print("✅ Silver accident table created (small mode)")
+         .saveAsTable(silver_accident))
+        print(f"✅ Silver accident table created (small mode) -> {silver_accident}")
 except Exception as e:
     logger.error(f"Error in silver accident processing pipeline: {e}")
     raise
@@ -860,7 +876,7 @@ print("⚡ Optimizing silver accident table...")
 
 try:
     # Optimize table for query performance
-    spark.sql("OPTIMIZE silver_accident")
+    spark.sql(f"OPTIMIZE {silver_accident}")
     
     # Optional: Z-ORDER by frequently queried columns
     # Uncomment if you have specific query patterns
@@ -876,7 +892,7 @@ except Exception as e:
 print("🔍 Validating silver table data quality...")
 
 try:
-    silver_table = spark.table("silver_accident")
+    silver_table = spark.table(silver_accident)
     
     # Basic counts
     total_records = silver_table.count()
@@ -921,7 +937,7 @@ except Exception as e:
 print("📊 Performing comprehensive severity analysis...")
 
 try:
-    silver_table = spark.table("silver_accident")
+    silver_table = spark.table(silver_accident)
     
     # Detailed severity statistics
     severity_stats = silver_table.select(
@@ -978,7 +994,7 @@ except Exception as e:
 print("📋 Generating business intelligence summary...")
 
 try:
-    silver_table = spark.table("silver_accident")
+    silver_table = spark.table(silver_accident)
     
     # Key business metrics
     total_claims = silver_table.count()

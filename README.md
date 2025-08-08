@@ -1,5 +1,7 @@
 # Smart Claims Processing on Microsoft Fabric
 
+> NOTE: This repository is an adaptation of the open accelerator at https://github.com/databricks-industry-solutions/smart-claims. It reuses the same synthetic insurance data and mirrors the original notebook flow (ingestion → enrichment → ML severity → rules → reporting) while refactoring code, schemas, and serving artifacts for Microsoft Fabric (Lakehouse medallion layers, schema-qualified bronze/silver/gold tables, gold star-schema materialized views, and Direct Lake Power BI guidance).
+
 ## 1. Purpose & Business Context
 Modern Property & Casualty insurers need to simultaneously:
 - Reduce claims cycle time & operating expense
@@ -109,15 +111,68 @@ Outputs:
 | High-Risk Claim Rate | Percentage flagged with multiple anomalies |
 | Fraud Suspect Count | Claims failing selected rule thresholds |
 | Average Cycle Time (extendable) | Requires additional timing fields |
+| Claim Amount per Risk Band | SUM(claim_amount_total) by risk_category |
+| Speed-Severity Correlation | Avg severity vs telematics_speed buckets |
+
+### Gold Semantic Layer Objects
+Materialized Views (schema `gold`):
+- Dimensions: `gold.dim_date`, `gold.dim_claim`, `gold.dim_policy`, `gold.dim_vehicle`, `gold.dim_location`, `gold.dim_risk`
+- Facts: `gold.fact_claims`, `gold.fact_telematics`, `gold.fact_accident_severity`, `gold.fact_rules`, `gold.fact_smart_claims` (wide) 
+- Aggregations: `gold.v_claims_summary_by_risk`, `gold.v_smart_claims_dashboard`
+
+Recommended Power BI model: use star schema (fact_claims central) with conformed keys (claim_no, policy_no, chassis_no, ZIP_CODE, severity_category). Hide wide table if dimensional model adopted.
 
 ## 8. Reporting (Power BI / SQL)
 Two consumption patterns:
-- Direct Lake on Gold Delta tables for interactive dashboards (single copy, low latency)
-- Fabric SQL DB (ELT push) for standardized semantic & operational APIs
+- Direct Lake on Gold materialized views (reduced latency, star schema ready)
+- Fabric SQL DB replication (optional) for enterprise semantic models, RLS, API reuse
 
-Sample Dashboards:
-- Loss Summary: trend lines, severity mix, geographic context
-- Claims Investigation: per-claim drill (images, telematics path, rule exceptions, ML severity vs reported)
+### Power BI Dataset Modeling Steps
+1. Connect to Lakehouse (Direct Lake) and select `gold` schema views.
+2. Import dimension views first, then fact views.
+3. Define relationships:
+   - fact_claims.claim_no  → dim_claim.claim_no (1:* set dim to single)
+   - fact_claims.policy_no → dim_policy.policy_no
+   - fact_claims.chassis_no → dim_vehicle.chassis_no
+   - fact_claims.severity_category → dim_risk.severity_category
+   - fact_claims.claim_date → dim_date.date_key
+   - (Optional) ZIP_CODE → dim_location.ZIP_CODE
+4. Hide surrogate or duplicate columns not needed in visuals.
+5. Mark `dim_date` as date table.
+6. Add DAX measures (see below).
+
+### Core DAX Measures (Updated)
+```
+Total Claims = COUNT(fact_claims[claim_no])
+Total Claim Amount = SUM(fact_claims[claim_amount_total])
+Avg Claim Amount = DIVIDE([Total Claim Amount],[Total Claims])
+High Severity Claims = CALCULATE([Total Claims], fact_claims[severity_category] IN {"High","Medium-High"})
+High Severity % = DIVIDE([High Severity Claims],[Total Claims])
+Total Exposure = SUM(fact_claims[sum_insured])
+Severity Index = AVERAGE(fact_claims[severity])
+Risk Weighted Amount = SUMX(fact_claims, fact_claims[claim_amount_total] * fact_claims[severity])
+Release Funds Count = COUNTROWS(FILTER(fact_rules, fact_rules[release_funds] = "release funds"))
+Release Funds % = DIVIDE([Release Funds Count],[Total Claims])
+Avg Telematics Speed = AVERAGE(fact_telematics[telematics_speed])
+Speed Risk Flagged Claims = CALCULATE([Total Claims], fact_claims[speed_risk_indicator] <> "NORMAL_RISK")
+Speed Risk % = DIVIDE([Speed Risk Flagged Claims],[Total Claims])
+Severity vs Speed Corr (Approx) = 
+    VAR t = SUMMARIZE(fact_claims, fact_claims[claim_no], "sev", AVERAGE(fact_claims[severity]), "spd", AVERAGE(fact_claims[telematics_speed]))
+    RETURN 
+    GENERATECOLUMNS( { (CORRX(t[sev], t[spd])) } ) // placeholder if custom correlation measure pattern used
+```
+(Adjust correlation pattern or use a disconnected calculation table; DAX does not expose CORR natively—implement via statistical pattern if needed.)
+
+### Suggested Visuals
+- KPI Cards: Total Claims, Total Claim Amount, High Severity %, Release Funds %
+- Bar: Claim Amount by Risk Category
+- Line: Severity Index over Month (use dim_date)
+- Scatter: Telematics Speed vs Severity (risk coloring)
+- Map: Claim Count by ZIP_CODE / BOROUGH
+- Matrix: Processing Flag x Risk Category (claim_count, avg_claim_amount)
+
+### Aggregation Strategy
+Leverage `gold.v_claims_summary_by_risk` for high-level cards; Direct Lake will automatically hit summarized view when visual grain matches.
 
 ## 9. Governance & Security
 - Column classification (PII: driver, insured contact) via Purview

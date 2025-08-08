@@ -97,23 +97,28 @@ def apply_data_quality_checks(df, expectations, drop_invalid=True):
 
 # COMMAND ----------
 
+# Set target schema for bronze layer
+bronze = "bronze"
+try:
+    spark.sql(f"CREATE SCHEMA IF NOT EXISTS {bronze}")
+    logger.info(f"Schema '{bronze}' is ready")
+except Exception as e:
+    logger.warning(f"Could not create schema {bronze}: {e}")
+
 def write_delta_table(df, table_name, mode="overwrite", optimize=True):
     """
-    Write DataFrame to Delta table with optimization
+    Write DataFrame to Delta table within bronze schema (unless already qualified)
     """
     try:
-        # Write to Delta table
+        fq_name = table_name if "." in table_name else f"{bronze}.{table_name}"
         df.write \
           .format("delta") \
           .mode(mode) \
           .option("overwriteSchema", "true") \
-          .saveAsTable(table_name)
-        
-        # Optimize the table
+          .saveAsTable(fq_name)
         if optimize:
-            spark.sql(f"OPTIMIZE {table_name}")
-            logger.info(f"Table {table_name} created and optimized successfully")
-        
+            spark.sql(f"OPTIMIZE {fq_name}")
+            logger.info(f"Table {fq_name} created and optimized successfully")
         return True
     except Exception as e:
         logger.error(f"Error writing table {table_name}: {str(e)}")
@@ -197,8 +202,8 @@ print("DATA PIPELINE EXECUTION SUMMARY")
 print("="*50)
 
 tables_info = [
-    ("bronze_claim", "Raw claims data from JSON files"),
-    ("bronze_policy", "Raw policy data from CSV file")
+    (f"{bronze}.bronze_claim", "Raw claims data from JSON files"),
+    (f"{bronze}.bronze_policy", "Raw policy data from CSV file")
 ]
 
 for table_name, description in tables_info:

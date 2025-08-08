@@ -350,3 +350,205 @@ SELECT
     CURRENT_TIMESTAMP() AS completion_time,
     'All tables created and optimized for Fabric Lakehouse' AS message;
 
+
+# In[35]:
+
+
+-- Ensure gold schema exists
+CREATE SCHEMA IF NOT EXISTS gold;
+
+-- =============================
+-- GOLD DIMENSION VIEWS
+-- =============================
+DROP MATERIALIZED LAKE VIEW IF EXISTS gold.dim_date;
+CREATE MATERIALIZED LAKE VIEW IF NOT EXISTS gold.dim_date AS
+WITH bounds AS (
+  SELECT date(min(claim_date)) AS min_d, date(max(claim_date)) AS max_d FROM silver_smart_claims_analytics
+), calendar AS (
+  SELECT explode(sequence(min_d, max_d, interval 1 day)) AS date_key FROM bounds
+)
+SELECT 
+  date_key,
+  year(date_key)        AS year,
+  quarter(date_key)     AS quarter,
+  month(date_key)       AS month,
+  date_format(date_key,'MMM') AS month_short,
+  weekofyear(date_key)  AS week_of_year,
+  day(date_key)         AS day_of_month,
+  date_format(date_key,'E')  AS day_name,
+  CASE WHEN date_format(date_key,'E') IN ('Sat','Sun') THEN 1 ELSE 0 END AS is_weekend
+FROM calendar;
+
+DROP MATERIALIZED LAKE VIEW IF EXISTS gold.dim_claim;
+CREATE MATERIALIZED LAKE VIEW IF NOT EXISTS gold.dim_claim AS
+SELECT DISTINCT
+  claim_no,
+  policy_no,
+  chassis_no,
+  claim_date,
+  severity,
+  severity_category,
+  risk_category,
+  processing_flag,
+  suspicious_activity,
+  premium,
+  SUM_INSURED AS sum_insured,
+  accident_telematics_distance_miles
+FROM silver_smart_claims_analytics
+WHERE claim_no IS NOT NULL;
+
+DROP MATERIALIZED LAKE VIEW IF EXISTS gold.dim_policy;
+CREATE MATERIALIZED LAKE VIEW IF NOT EXISTS gold.dim_policy AS
+SELECT DISTINCT
+  policy_no,
+  CUST_ID AS customer_id,
+  driver_age,
+  pol_issue_date,
+  pol_expiry_date,
+  premium,
+  SUM_INSURED AS sum_insured
+FROM silver_smart_claims_analytics
+WHERE policy_no IS NOT NULL;
+
+DROP MATERIALIZED LAKE VIEW IF EXISTS gold.dim_vehicle;
+CREATE MATERIALIZED LAKE VIEW IF NOT EXISTS gold.dim_vehicle AS
+SELECT DISTINCT
+  chassis_no,
+  MAKE,
+  MODEL,
+  MODEL_YEAR
+FROM silver_smart_claims_analytics
+WHERE chassis_no IS NOT NULL;
+
+DROP MATERIALIZED LAKE VIEW IF EXISTS gold.dim_location;
+CREATE MATERIALIZED LAKE VIEW IF NOT EXISTS gold.dim_location AS
+SELECT DISTINCT
+  ZIP_CODE,
+  BOROUGH,
+  NEIGHBORHOOD,
+  latitude,
+  longitude
+FROM silver_smart_claims_analytics
+WHERE ZIP_CODE IS NOT NULL OR (latitude IS NOT NULL AND longitude IS NOT NULL);
+
+DROP MATERIALIZED LAKE VIEW IF EXISTS gold.dim_risk;
+CREATE MATERIALIZED LAKE VIEW IF NOT EXISTS gold.dim_risk AS
+SELECT DISTINCT
+  severity_category,
+  risk_category,
+  processing_flag,
+  speed_risk_indicator
+FROM silver_smart_claims_analytics;
+
+-- =============================
+-- GOLD FACT VIEWS
+-- =============================
+DROP MATERIALIZED LAKE VIEW IF EXISTS gold.fact_claims;
+CREATE MATERIALIZED LAKE VIEW IF NOT EXISTS gold.fact_claims AS
+SELECT 
+  claim_no,
+  policy_no,
+  chassis_no,
+  claim_date,
+  claim_amount_total,
+  claim_amount_vehicle,
+  claim_amount_injury,
+  claim_amount_property,
+  premium,
+  SUM_INSURED AS sum_insured,
+  severity,
+  severity_category,
+  risk_category,
+  processing_flag
+FROM silver_smart_claims_analytics;
+
+DROP MATERIALIZED LAKE VIEW IF EXISTS gold.fact_telematics;
+CREATE MATERIALIZED LAKE VIEW IF NOT EXISTS gold.fact_telematics AS
+SELECT 
+  chassis_no,
+  claim_no,
+  telematics_speed,
+  telematics_speed_std,
+  telematics_latitude,
+  telematics_longitude,
+  accident_telematics_distance_miles,
+  speed_risk_indicator
+FROM silver_smart_claims_analytics;
+
+DROP MATERIALIZED LAKE VIEW IF EXISTS gold.fact_accident_severity;
+CREATE MATERIALIZED LAKE VIEW IF NOT EXISTS gold.fact_accident_severity AS
+SELECT 
+  claim_no,
+  chassis_no,
+  severity,
+  severity_category,
+  risk_category,
+  processing_flag,
+  data_source,
+  analytics_created_timestamp
+FROM silver_smart_claims_analytics;
+
+-- Rules / outcomes fact (requires gold.gold_insights produced by rules engine)
+DROP MATERIALIZED LAKE VIEW IF EXISTS gold.fact_rules;
+CREATE MATERIALIZED LAKE VIEW IF NOT EXISTS gold.fact_rules AS
+SELECT 
+  claim_no,
+  policy_no,
+  chassis_no,
+  valid_date,
+  valid_amount,
+  reported_severity_check,
+  release_funds,
+  rules_processed_timestamp
+FROM gold.gold_insights;
+
+-- Wide integrated fact (single-table model option)
+DROP MATERIALIZED LAKE VIEW IF EXISTS gold.fact_smart_claims;
+CREATE MATERIALIZED LAKE VIEW IF NOT EXISTS gold.fact_smart_claims AS
+SELECT * FROM silver_smart_claims_analytics;
+
+-- =============================
+-- DASHBOARD FRIENDLY AGGREGATIONS
+-- =============================
+DROP MATERIALIZED LAKE VIEW IF EXISTS gold.v_claims_summary_by_risk;
+CREATE MATERIALIZED LAKE VIEW IF NOT EXISTS gold.v_claims_summary_by_risk AS
+SELECT 
+  risk_category,
+  processing_flag,
+  COUNT(*) AS claim_count,
+  AVG(claim_amount_total) AS avg_claim_amount,
+  AVG(severity) AS avg_severity,
+  AVG(telematics_speed) AS avg_speed,
+  SUM(claim_amount_total) AS total_exposure
+FROM silver_smart_claims_analytics
+GROUP BY risk_category, processing_flag;
+
+DROP MATERIALIZED LAKE VIEW IF EXISTS gold.v_smart_claims_dashboard;
+CREATE MATERIALIZED LAKE VIEW IF NOT EXISTS gold.v_smart_claims_dashboard AS
+SELECT 
+    claim_no,
+    chassis_no,
+    policy_no,
+    CUST_ID,
+    MAKE,
+    MODEL,
+    claim_amount_total,
+    claim_amount_vehicle,
+    claim_amount_injury,
+    claim_amount_property,
+    SUM_INSURED,
+    premium,
+    severity,
+    suspicious_activity,
+    risk_category,
+    processing_flag,
+    telematics_speed,
+    speed_risk_indicator,
+    accident_telematics_distance_miles,
+    BOROUGH,
+    NEIGHBORHOOD,
+    ZIP_CODE,
+    claim_date,
+    analytics_created_timestamp 
+FROM silver_smart_claims_analytics;
+

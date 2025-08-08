@@ -68,6 +68,18 @@ print("Reading parquet files to examine schema and data...")
 try:
     # Read all parquet files in the directory
     telematics_raw_df = spark.read.parquet(telematics_path)
+    # Add raw ingestion metadata and persist immediately to bronze
+    telematics_raw_bronze = (telematics_raw_df
+        .withColumn("load_timestamp", F.current_timestamp())
+        .withColumn("load_date", F.current_date())
+        .withColumn("source_path", F.lit(telematics_path))
+    )
+    (telematics_raw_bronze.write
+        .format("delta")
+        .mode("overwrite")  # adjust to append for incremental loads
+        .option("overwriteSchema", "true")
+        .saveAsTable(f"{bronze}.bronze_telematics"))
+    print(f"✅ Landed raw telematics to {bronze}.bronze_telematics ({telematics_raw_bronze.count():,} rows)")
     
     # Get basic information
     record_count = telematics_raw_df.count()
@@ -139,7 +151,7 @@ print("Applying data transformations...")
 
 try:
     # Start with the raw data
-    telematics_cleaned_df = telematics_raw_df
+    telematics_cleaned_df = spark.table(f"{bronze}.bronze_telematics")
     
     # Add metadata columns for tracking
     telematics_cleaned_df = (telematics_cleaned_df
@@ -188,20 +200,11 @@ try:
     # Option 1: Simple write (use this if unsure about partitioning)
     (telematics_cleaned_df.write
      .format("delta")
-     .mode("overwrite")  # Use "append" for incremental loads
+     .mode("overwrite")
      .option("overwriteSchema", "true")
-     .saveAsTable("silver_telematics")
+     .partitionBy("ingestion_date")
+     .saveAsTable(f"{silver}.silver_telematics")
     )
-    
-    # Option 2: Write with partitioning (uncomment if you have date columns)
-    # Adjust partition column based on your data
-    # (telematics_cleaned_df.write
-    #  .format("delta")
-    #  .mode("overwrite")
-    #  .option("overwriteSchema", "true")
-    #  .partitionBy("ingestion_date")  # or another date column
-    #  .saveAsTable("silver_telematics")
-    # )
     
     print("✅ Delta table created successfully")
     
@@ -216,7 +219,7 @@ print("Optimizing Delta table...")
 
 try:
     # Basic optimization
-    spark.sql("OPTIMIZE silver_telematics")
+    spark.sql(f"OPTIMIZE {silver}.silver_telematics")
     print("✅ Table optimization completed")
     
     # Optional: Z-ORDER optimization for frequently queried columns
@@ -234,7 +237,7 @@ print("Validating silver_telematics table...")
 
 try:
     # Read the Delta table
-    delta_table = spark.table("silver_telematics")
+    delta_table = spark.table(f"{silver}.silver_telematics")
     
     # Get table statistics
     delta_count = delta_table.count()
@@ -261,7 +264,7 @@ try:
     
     # Show table properties
     print(f"\n🔧 Table Information:")
-    spark.sql("DESCRIBE EXTENDED silver_telematics").show(50, False)
+    spark.sql(f"DESCRIBE EXTENDED {silver}.silver_telematics").show(50, False)
     
 except Exception as e:
     logger.error(f"Error validating Delta table: {str(e)}")
@@ -274,13 +277,13 @@ print("="*60)
 
 try:
     # Final statistics
-    telematics_table = spark.table("silver_telematics")
+    telematics_table = spark.table(f"{silver}.silver_telematics")
     final_record_count = telematics_table.count()
     
-    print(f"✅ Successfully created silver_telematics Delta table")
+    print(f"✅ Successfully created {silver}.silver_telematics Delta table")
     print(f"📊 Final record count: {final_record_count:,}")
     print(f"📁 Source: Parquet files from {telematics_path}")
-    print(f"🗃️  Destination: silver_telematics Delta table")
+    print(f"🗃️  Destination: {silver}.silver_telematics Delta table")
     
     # File information - simplified for Fabric
     print(f"📄 Processed parquet files from telematics directory")
@@ -310,7 +313,7 @@ print("="*60)
 print("Performing detailed data profiling...")
 
 try:
-    telematics_table = spark.table("silver_telematics")
+    telematics_table = spark.table(f"{silver}.silver_telematics")
     
     # Basic statistics for numeric columns
     numeric_columns = [f.name for f in telematics_table.schema.fields 
@@ -345,13 +348,9 @@ except Exception as e:
 print("Setting up data quality monitoring...")
 
 try:
-    telematics_table = spark.table("silver_telematics")
-    
-    # Create a simple data quality report
-    total_records = telematics_table.count()
-    
+    telematics_table = spark.table(f"{silver}.silver_telematics")
     quality_report = {
-        "table_name": "silver_telematics",
+        "table_name": f"{silver}.silver_telematics",
         "total_records": total_records,
         "ingestion_timestamp": telematics_table.select(F.max("ingestion_timestamp")).collect()[0][0],
         "null_counts": {},

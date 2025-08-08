@@ -1,168 +1,247 @@
-# Smart Claims Power BI Dashboard Guide
+# Smart Claims Power BI Dashboard Guide (Updated Star Schema Version)
 
-This guide explains how to recreate the Databricks dashboards (Smart Claims Summary Report & Smart Claims Investigation) in Microsoft Fabric Power BI. It includes data model design, DAX measures, visuals, and layout recommendations.
+This guide explains how to build a scalable, maintainable Power BI semantic model and dashboards over the Fabric Lakehouse Gold layer. It replaces prior direct usage of mixed Silver / gold_insights tables with a curated star schema of materialized views in the `gold` schema.
 
-## 1. Data Sources
+---
+## 1. Data Sources (Gold Layer)
+Primary gold materialized views (Direct Lake recommended):
+- Dimensions:
+  - `gold.dim_date`
+  - `gold.dim_claim`
+  - `gold.dim_policy`
+  - `gold.dim_vehicle`
+  - `gold.dim_location`
+  - `gold.dim_risk`
+- Facts:
+  - `gold.fact_claims` (central grain: 1 row per claim)
+  - `gold.fact_rules` (rule evaluation results, claim grain – may left join or treat as fact-outrigger)
+  - `gold.fact_telematics` (claim / chassis-level telematics summary attributes; may be separate fact or merged)
+  - `gold.fact_accident_severity` (image / claim severity history – optional long-term analysis)
+  - `gold.fact_smart_claims` (wide integrated table – use only for rapid prototyping, then hide)
+- Aggregations:
+  - `gold.v_claims_summary_by_risk` (pre-aggregated – can accelerate visuals at risk category grain)
+  - `gold.v_smart_claims_dashboard` (flattened for quick ad‑hoc exploration)
 
-Use Lakehouse tables (DirectLake or Import):
-- `gold_insights` (fact claims & enriched metrics)
-- `silver_accident` (image-level predictions, severity, metadata)
-- `silver_claim_policy_telematics` (lat/long telemetry path)
-- `silver_policy` (policy attributes & effective dates)
-- Optional: `silver_claim` (raw claim amounts if separated)
-- Optional: Date dimension (recommended)
+Recommended Core Model (lean): dim_* + fact_claims (+ optionally fact_rules). Add other facts later as needed.
 
-## 2. Data Model & Relationships
+---
+## 2. Star Schema & Relationships
+Load dimensions first, then facts. Define single-direction (dim ➜ fact) relationships:
+| From (Dim) | Column | To (Fact) | Column | Cardinality |
+|------------|--------|-----------|--------|-------------|
+| dim_claim  | claim_no | fact_claims | claim_no | 1:* |
+| dim_policy | policy_no | fact_claims | policy_no | 1:* |
+| dim_vehicle| chassis_no | fact_claims | chassis_no | 1:* |
+| dim_risk   | severity_category | fact_claims | severity_category | *:* (make supporting; optionally build surrogate key) |
+| dim_date   | date_key | fact_claims | claim_date | 1:* |
+| dim_location | ZIP_CODE | fact_claims | ZIP_CODE | *:* (optional; many claims per ZIP – acceptable) |
+| dim_claim  | claim_no | fact_rules | claim_no | 1:* (if fact_rules loaded) |
 
-Recommended relationships (single direction):
-- `gold_insights[claim_no]` 1:* `silver_accident[claim_no]`
-- `gold_insights[claim_no]` 1:* `silver_claim_policy_telematics[claim_no]`
-- `gold_insights[policy_no]` 1:* `silver_policy[policy_no]` (if needed)
-- `Date[Date]` 1:* `gold_insights[claim_date]`
+Best Practices:
+- Mark `dim_date` as Date table.
+- Hide key columns on fact tables (claim_no, policy_no, etc.) after relationships established (leave one visible key for drillthrough if desired).
+- Consider a surrogate risk key if combining multiple risk attributes; otherwise treat each attribute as its own slicer.
+- Create role-playing date dimensions (e.g., Policy Effective Date) by duplicating dim_date via calculated table if needed.
 
-Mark the `Date` table as a Date table. Create it with DAX:
+Optional Simplification Path:
+- For initial build, use only `fact_claims` + `dim_date` + `dim_policy` + `dim_vehicle` + `dim_risk`.
+- Later add `fact_rules` for workflow KPIs, and `fact_telematics` for behavioral analytics.
+
+---
+## 3. Column Usage Guidelines
+Prefer measures over calculated columns. Only create calculated columns when:
+- Relationship / key normalization required (e.g., derived bucket not easily expressed as dynamic measure context).
+- Static attribute needed for slicer that does not change with filters.
+
+Suggested Minimal Calculated Columns:
+In `dim_claim`:
 ```DAX
-Date = CALENDAR(DATE(2016,1,1), DATE(2025,12,31))
-```
-Add supporting columns if needed (Year, Month, MonthName, Quarter, etc.).
-
-## 3. Calculated Columns (Flags & Buckets)
-
-In `gold_insights` (use as few columns as possible, prefer measures if dynamic):
-```DAX
-ValidPolicyFlag = IF(gold_insights[valid_date] = "NOT VALID", 0, 1)
-SeverityMatchFlag = IF(gold_insights[reported_severity_check] = "Severity matches the report", 1, 0)
-ApproveAmountFlag = IF(gold_insights[valid_amount] = "claim value more than premium", 0, 1)
-HighSpeedFlag = 
-VAR s = gold_insights[speed_check]
-RETURN IF(s = "High Speed", 1, IF(s = "Normal Speed", 0, BLANK()))
-
-SeverityBucket = 
+dim_claim[Severity Band] =
 SWITCH(TRUE(),
-  gold_insights[severity] >= 0.8, "High",
-  gold_insights[severity] >= 0.6, "Medium-High",
-  gold_insights[severity] >= 0.4, "Medium",
-  gold_insights[severity] >= 0.2, "Low-Medium",
+  dim_claim[severity] >= 0.8, "High",
+  dim_claim[severity] >= 0.6, "Medium-High",
+  dim_claim[severity] >= 0.4, "Medium",
+  dim_claim[severity] >= 0.2, "Low-Medium",
   "Low"
 )
 ```
-
-For images (if URL build required):
+In `dim_claim` (Age Buckets if driver_age existed there; otherwise in policy dim):
 ```DAX
-ImageURL = "https://<storage-path>/" & silver_accident[image_name]
-```
-Set Data Category = Image URL.
-
-## 4. Core Measures (DAX)
-
-```DAX
-Claims = DISTINCTCOUNT(gold_insights[claim_no])
-Total Claim Amount = SUM(gold_insights[claim_amount_total])
-Injury Amount = SUM(gold_insights[claim_amount_injury])
-Property Amount = SUM(gold_insights[claim_amount_property]) + SUM(gold_insights[claim_amount_vehicle])
-Valid Policy % = AVERAGE(gold_insights[ValidPolicyFlag])
-Severity Match % = AVERAGE(gold_insights[SeverityMatchFlag])
-Approve Amount % = AVERAGE(gold_insights[ApproveAmountFlag])
-Suspicious Count = CALCULATE(COUNTROWS(gold_insights), gold_insights[suspicious_activity] = TRUE())
-Liability Damage = SUM(gold_insights[claim_amount_injury])
-Property Damage = SUM(gold_insights[claim_amount_property]) + SUM(gold_insights[claim_amount_vehicle])
-Severity Distribution = [Claims]  // Use with SeverityBucket on axis
-Avg Speeding Ratio = AVERAGE(gold_insights[HighSpeedFlag])
-
-// Optional Comparison
-Severity Agreement Rate = AVERAGE(gold_insights[SeverityMatchFlag])
-```
-
-Loss Ratio (if premiums & claims separated):
-```DAX
-Loss Ratio =
-DIVIDE(
-  SUM(gold_insights[claim_amount_total]),
-  CALCULATE(SUM(silver_policy[premium]))
+dim_policy[Driver Age Bucket] =
+SWITCH(TRUE(),
+  dim_policy[driver_age] < 25, "<25",
+  dim_policy[driver_age] < 35, "25-34",
+  dim_policy[driver_age] < 50, "35-49",
+  dim_policy[driver_age] < 65, "50-64",
+  "65+"
 )
 ```
-(Adjust to mirror complex SQL if period-over-period needed.)
-
-## 5. Report Pages
-
-### Page 1: Claims Summary
-Visuals:
-- KPI Cards: Claims, Total Claim Amount, Valid Policy %, Severity Match %, Approve Amount %, Suspicious Count
-- Column Chart: Incidents by Vehicle Year (Axis: model_year; Value: Claims or count)
-- Pie/Donut or 100% Stacked Column: Liability vs Property Damage (Liability Damage, Property Damage)
-- Line Chart: Incidents by Hour (incident_hour vs Claims + dual lines for Liability Damage & Property Damage)
-- Column / Histogram: Driver Age Distribution (driver_age vs count)
-- Stacked Column: Incident Type vs Incident Severity (incident_type axis, incident_severity legend, value count)
-- Severity Distribution: Column chart (SeverityBucket vs Claims)
-- Map: Policy / Claim Locations (latitude, longitude from `silver_claim_policy_location` if available)
-
-Slicers:
-- Date range (Date[Date])
-- Incident Type
-- SeverityBucket
-- Policy No
-- Claim No (maybe moved to Investigation page only)
-
-### Page 2: Claims Investigation
-Focus on a selected claim:
-- Slicers: Claim No, Policy No
-- Claim Detail Table: claim_date, incident_type, reported vs predicted severity, reported_severity_check, valid_amount, valid_date, claim_amount_* fields
-- Image Gallery: Table visual with `ImageURL`
-- Map: Telematics path (Latitude/Longitude with claim filter)
-- KPI Indicators: Valid Policy %, Approve Amount %, Severity Match %, Suspicious Count (filtered context)
-- Speeding Gauge / Card: Avg Speeding Ratio (filtered by claim)
-- Reported vs Predicted Severity: Clustered bar (two measures or raw columns if categorical)
-
-### Page 3: Policy Analytics (Optional)
-- Claims per Policy distribution
-- Expired Policies Count (measure using pol_expiry_date < claim_date)
-- Loss Ratio trend (by month/quarter)
-- Average Claim Amount per Policy
-
-## 6. Drillthrough
-Create a Drillthrough page (Claim Detail):
-- Add Drillthrough field: claim_no
-- Provide full metrics and images
-Right-click any claim in summary visuals → Drillthrough.
-
-## 7. Performance Tips
-- Use DirectLake for large tables when possible.
-- Avoid high-cardinality visuals (limit table row count or enable paging).
-- Disable unnecessary interactions (Format → Edit interactions) to reduce query chatter.
-- Pre-create measures instead of repeated implicit aggregations.
-- Limit calculated columns; prefer measures when dependent on filters.
-
-## 8. Security (Optional)
-Row Level Security examples:
-```DAX
--- Role: PolicyRegionFilter
-[policy_region] = USERPRINCIPALNAME()  // or map via bridge table
-```
-Publish roles and assign in workspace.
-
-## 9. Validation Checklist
-- DISTINCTCOUNT(claim_no) matches SQL baseline.
-- Sample claim details match underlying `gold_insights` rows.
-- Map points count = telematics records for selected claim.
-- Image gallery loads all images per claim.
-- Loss ratio measure aligns with SQL audit query output.
-
-## 10. Deployment Steps
-1. Get Data → OneLake / Lakehouse tables.
-2. Create relationships & mark Date table.
-3. Add calculated columns & measures.
-4. Build visuals per page layout.
-5. Configure slicers, drillthrough, bookmarks (if needed).
-6. Apply theme / corporate colors.
-7. Validate metrics vs SQL queries (export sample).
-8. Publish to Fabric workspace; set refresh or rely on DirectLake.
-9. Share report & optionally pin high-level KPIs to a dashboard.
-
-## 11. Future Enhancements
-- Add incremental refresh for large historical claim tables.
-- Implement calculation groups for dynamic measure switching (Damage Type selector).
-- Add anomaly detection visual using AI (Fabric advanced visuals).
-- Integrate AI Q&A (enable Q&A visual on curated fields).
+Avoid duplicating severity band logic across tables.
 
 ---
-**Outcome:** This blueprint replicates and extends the Databricks dashboards in Power BI with maintainable DAX, scalable model design, and investigative workflows.
+## 4. Measure Design Principles
+Naming Conventions:
+- Core aggregations: Pascal Case (e.g., `Total Claims`)
+- Ratios / percentages end with `%`
+- Flags prefixed with descriptor (e.g., `High Severity Claims`)
+- Avoid embedding filter logic in multiple measures; build base + derivative.
+
+Foldering (Display Folders):
+- Volume, Financial, Severity, Risk, Quality, Telematics, Rules, Time Intelligence.
+
+Re-use patterns (`VAR` for clarity, `DIVIDE` for safety), and isolate reused sets in base measures.
+
+---
+## 5. Core DAX Measures (Fact: fact_claims)
+```DAX
+-- Volume
+Total Claims = DISTINCTCOUNT(fact_claims[claim_no])
+Total Policies = DISTINCTCOUNT(fact_claims[policy_no])
+Total Vehicles = DISTINCTCOUNT(fact_claims[chassis_no])
+
+-- Financial
+Total Claim Amount = SUM(fact_claims[claim_amount_total])
+Vehicle Claim Amount = SUM(fact_claims[claim_amount_vehicle])
+Injury Claim Amount = SUM(fact_claims[claim_amount_injury])
+Property Claim Amount = SUM(fact_claims[claim_amount_property])
+Avg Claim Amount = DIVIDE([Total Claim Amount], [Total Claims])
+Exposure (Sum Insured) = SUM(fact_claims[sum_insured])
+
+-- Severity / Risk
+Average Severity = AVERAGE(fact_claims[severity])
+High Severity Claims = CALCULATE([Total Claims], fact_claims[severity_category] IN {"High","Medium-High"})
+High Severity % = DIVIDE([High Severity Claims], [Total Claims])
+Risk Weighted Amount = SUMX(fact_claims, fact_claims[claim_amount_total] * fact_claims[severity])
+
+-- Processing / Workflow
+Processing Review Claims = CALCULATE([Total Claims], fact_claims[processing_flag] = "REVIEW_REQUIRED")
+Processing Review % = DIVIDE([Processing Review Claims],[Total Claims])
+Total Loss Candidates = CALCULATE([Total Claims], fact_claims[processing_flag] = "TOTAL_LOSS_CANDIDATE")
+
+-- Speed / Behavior (if telematics columns present in fact_claims; else use fact_telematics)
+Average Telematics Speed = AVERAGE(fact_claims[telematics_speed])
+High Speed Risk Claims = CALCULATE([Total Claims], fact_claims[speed_risk_indicator] IN {"HIGH_SPEED_SEVERE","MODERATE_SPEED_RISK"})
+High Speed Risk % = DIVIDE([High Speed Risk Claims],[Total Claims])
+
+-- Rules (joins fact_rules via claim_no)
+Release Funds Claims = CALCULATE([Total Claims], fact_rules[release_funds] = "release funds")
+Release Funds % = DIVIDE([Release Funds Claims],[Total Claims])
+Valid Policy Claims = CALCULATE([Total Claims], fact_rules[valid_date] = "VALID")
+Valid Policy % = DIVIDE([Valid Policy Claims],[Total Claims])
+Valid Amount Claims = CALCULATE([Total Claims], fact_rules[valid_amount] = "claim value in the range of premium")
+Valid Amount % = DIVIDE([Valid Amount Claims],[Total Claims])
+Severity Agreement Claims = CALCULATE([Total Claims], fact_rules[reported_severity_check] = "Severity matches the report")
+Severity Agreement % = DIVIDE([Severity Agreement Claims],[Total Claims])
+
+-- Loss Ratio (simplified; requires premium by policy – if premium is in dim_policy link via relationship)
+Premium Amount = SUM(dim_policy[premium])
+Loss Ratio = DIVIDE([Total Claim Amount], [Premium Amount])
+
+-- Claim Frequency (claims per policy)
+Claim Frequency = DIVIDE([Total Claims], [Total Policies])
+
+-- Distribution Helpers (used in visuals)
+Severity Band Claims = [Total Claims]  -- Place Severity Band (dim_claim[Severity Band]) on axis
+Risk Category Claims = [Total Claims]  -- Place risk_category from dim_claim or dim_risk
+
+-- Time Intelligence (example: requires dim_date marked date table)
+Total Claim Amount PY = CALCULATE([Total Claim Amount], DATEADD(dim_date[date_key], -1, YEAR))
+YoY Claim Amount % = DIVIDE([Total Claim Amount] - [Total Claim Amount PY], [Total Claim Amount PY])
+
+-- Data Quality / Distance
+Avg Accident-Event Distance (Miles) = AVERAGE(fact_claims[accident_telematics_distance_miles])
+```
+
+Optional Percentile Measures (approximate pattern):
+```DAX
+-- Requires a separate calculation table or summarized values; placeholder for advanced stats.
+```
+
+---
+## 6. Additional Fact / Telematics Measures (If using fact_telematics)
+```DAX
+Telematics Records = COUNTROWS(fact_telematics)
+Avg Speed (Telematics Fact) = AVERAGE(fact_telematics[telematics_speed])
+Speed StdDev (Telematics) = AVERAGE(fact_telematics[telematics_speed_std])
+Speed Severity Interaction = AVERAGEX(fact_telematics, fact_telematics[telematics_speed] * RELATED(fact_claims[severity]))
+```
+
+---
+## 7. Visual Layer Recommendations
+Page 1 – Executive Overview:
+- KPI Cards: Total Claim Amount, Total Claims, High Severity %, Release Funds %, Loss Ratio, Claim Frequency.
+- Bar: Claim Amount by Severity Band.
+- Stacked Bar: Claim Amount by Risk Category & Processing Flag.
+- Line: Total Claim Amount (Month) with YoY comparator.
+- Scatter: Severity vs Telematics Speed (color by Risk Category).
+- Map: Claims by ZIP_CODE (size: Total Claim Amount, color: High Severity %).
+- Matrix: Risk Category vs Severity Band (claim_count, avg_claim_amount).
+
+Page 2 – Investigation:
+- Slicer Panel: Claim No, Policy No, Severity Band, Risk Category.
+- Claim Detail Table: severity, severity_category, processing_flag, release_funds, claim_amount_*.
+- KPI Row: Valid Policy %, Valid Amount %, Severity Agreement %, Release Funds %.
+- Speed Trend / Distribution (if time-grain data present).
+- Drillthrough link to Image / Telemetry detail (if separate report or custom visual).
+
+Page 3 – Policy / Underwriting:
+- Claims per Policy Histogram (Claim Frequency).
+- Loss Ratio by Driver Age Bucket.
+- Premium vs Claim Amount scatter (bubble size = severity average).
+
+Page 4 – Operations / Rules:
+- Rule Effectiveness: Count of claims failing each primary rule (stacked bar).
+- Funnel: Total Claims → Valid Policy Claims → Valid Amount Claims → Severity Agreement → Release Funds.
+
+---
+## 8. Drillthrough & Navigation
+- Create Drillthrough on `claim_no` with detailed rule outcomes & severity history.
+- Bookmark set for toggling between aggregated and detailed telematics visuals.
+
+---
+## 9. Performance Tips
+- Use star schema – avoid wide table joins at visual time.
+- Hide unused columns & disable auto date/time.
+- Avoid bi-directional relationships; use explicit DAX if cross-filter needed.
+- Use pre-aggregated view `gold.v_claims_summary_by_risk` for high-level cards (Direct Lake can fold).
+- Group measures into display folders for discoverability.
+
+---
+## 10. Security (Optional)
+Row-Level Security Example (Region-based – requires region attribute in a dim):
+```DAX
+[UserRegion] = LOOKUPVALUE(dim_policy[territory], dim_policy[policy_no], SELECTEDVALUE(fact_claims[policy_no])) = USERPRINCIPALNAME()
+```
+Leverage Azure AD groups for assignment.
+
+---
+## 11. Validation Checklist
+- `Total Claims` matches SQL COUNT DISTINCT claim_no in `gold.fact_claims`.
+- Loss Ratio equals manual division of sums (spot check sample periods).
+- High Severity % equals (# severity_category in {High, Medium-High}) ÷ Total Claims.
+- Release Funds % matches query on `gold.fact_rules` where release_funds = 'release funds'.
+- YoY checks reconcile using exported month-level aggregates.
+
+---
+## 12. Deployment Workflow
+1. Connect to Lakehouse -> Select `gold` schema views.
+2. Load dims, then facts; set relationships.
+3. Mark `dim_date` as Date table.
+4. Create calculated columns (severity band, age bucket) sparingly.
+5. Add core measures from this guide.
+6. Build visuals per page design.
+7. Add drillthrough pages & bookmarks.
+8. Test RLS (if configured).
+9. Publish & set refresh (Direct Lake generally no schedule needed unless mixing Import).
+10. Document measures (description property) for maintainability.
+
+---
+## 13. Future Enhancements
+- Calculation Groups (Time Intelligence, Scenario Switching).
+- Incremental historical retention & snapshot fact for reserve tracking.
+- Advanced anomaly scoring (add ML outputs to dim_risk).
+- KPI thresholds table (parameter-driven conditional formatting).
+- Decomposition Tree & AI Insights for claim drivers.
+
+---
+**Outcome:** A clean star-schema semantic layer enabling performant Direct Lake dashboards with transparent, reusable DAX measures and extensibility for advanced insurance analytics.

@@ -83,7 +83,7 @@ Import the Fabric-converted notebooks in this order:
 | 3 | `03_iot.py` | Telematics processing |
 | 4 | `04a_policy_location.py` | Geocoding enhancement |
 | 5 | `05_severity_prediction.py` | AI damage assessment |
-| 6 | `06_rule_fabric.py` | Business rules engine |
+| 6 | `06_rules_engine.py` | Business rules engine |
 
 ### Step 3: Create Data Pipeline
 

@@ -132,11 +132,20 @@ def geocode_addresses_batch(addresses_df, batch_size=50):
 
 # COMMAND ----------
 
+# Define silver schema
+silver = "silver"
+try:
+    spark.sql(f"CREATE SCHEMA IF NOT EXISTS {silver}")
+except Exception as e:
+    logger.warning(f"Schema creation warning for {silver}: {e}")
+
+# COMMAND ----------
+
 # Load the silver claim policy table
 logger.info("Loading silver_claim_policy table...")
 
 try:
-    policy_claim_df = spark.table("silver_claim_policy")
+    policy_claim_df = spark.table(f"{silver}.silver_claim_policy")
     record_count = policy_claim_df.count()
     logger.info(f"Loaded {record_count:,} records from silver_claim_policy")
     
@@ -307,15 +316,12 @@ try:
     # Write to Delta table
     (final_df.write
      .format("delta")
-     .mode("overwrite")  # Changed from append to overwrite for consistency
+     .mode("overwrite")
      .option("overwriteSchema", "true")
-     .saveAsTable("silver_claim_policy_location"))
+     .saveAsTable(f"{silver}.silver_claim_policy_location"))
+    spark.sql(f"OPTIMIZE {silver}.silver_claim_policy_location")
+    saved_count = spark.table(f"{silver}.silver_claim_policy_location").count()
     
-    # Optimize the table
-    spark.sql("OPTIMIZE silver_claim_policy_location")
-    
-    # Verify the save
-    saved_count = spark.table("silver_claim_policy_location").count()
     logger.info(f"✅ Successfully saved {saved_count:,} records to silver_claim_policy_location")
     
 except Exception as e:
@@ -331,7 +337,7 @@ print("="*60)
 
 try:
     # Get table statistics
-    location_table = spark.table("silver_claim_policy_location")
+    location_table = spark.table(f"{silver}.silver_claim_policy_location")
     total_records = location_table.count()
     
     # Count records with coordinates
@@ -372,7 +378,7 @@ print("="*60)
 logger.info("Performing data quality checks...")
 
 try:
-    location_table = spark.table("silver_claim_policy_location")
+    location_table = spark.table(f"{silver}.silver_claim_policy_location")
     
     # Check for valid coordinate ranges
     invalid_lat = location_table.filter(

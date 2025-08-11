@@ -56,6 +56,8 @@ This guide aligns with the latest gold layer where dimensions and facts are **ph
 | dim_policy     | fact_rules             | policy_no                                     | 1:*         |
 | dim_vehicle    | fact_rules             | chassis_no                                    | 1:*         |
 
+<img src="https://github.com/alipouw13/fabric-claimsprocessing/blob/main/resource/images/semantic_model.png" alt="Core Semantic Model" width="600"/>
+
 ### Risk Key Construction
 Surrogate `risk_key` = `severity_category & "|" & risk_category & "|" & processing_flag & "|" & speed_risk_indicator`.
 Persisted in `dim_risk` and each fact (*except* `fact_rules`, which currently lacks risk attributes). If needed in `fact_rules`, add source attributes upstream and derive `risk_key` similarly.

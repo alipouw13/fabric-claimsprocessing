@@ -36,206 +36,150 @@ Key Components:
 - Power BI Direct Lake: zero-copy BI on Gold Delta tables
 - MLflow (optional): model registry for severity model
 - Azure OpenAI / Vision (extensible): advanced damage assessment & summarization
-- Purview (Governance): data catalog, lineage, classification
+- Purview (optional): data catalog, lineage, classification
 
 ## 3. Repository Structure
 ```
 root/
   notebooks/
-    00_README.py                         Fabric-oriented overview
-    01_policy_claims_sourceToBronze.py    Ingest raw policy & claims sources to Bronze
-    02_policy_claims_bronzeToSilver.py    Bronze → Silver normalization & conformance
-    03_iot.py                             Telematics / IoT ingestion simulation (optional streaming stub)
-    04_policy_location.py                 Geospatial enrichment (zipcode → lat/long)
-    05a_accident_images_bronze_fabric.py  Accident image metadata & content ingestion to Bronze
-    05b_severity_prediction_silver_fabric.py  Chunked ML severity scoring & Silver accident table build
-    06_rule.py                            Base rule application / transformations
-    06_rules_engine.py                    Extended rule engine (composite risk & quality scoring)
-    07_policy_claims_accident_views.sql   SQL views / serving layer definitions (joins & curated views)
+    00_README.py                              Fabric-oriented overview
+    01_policy_claims_sourceToBronze.py        Ingest raw policy & claims sources to Bronze
+    02_policy_claims_bronzeToSilver.py        Bronze → Silver normalization & conformance
+    03_iot.py                                 Telematics / IoT ingestion simulation (optional streaming stub)
+    04_policy_location.py                     Geospatial enrichment (zipcode → lat/long)
+    05a_accident_images_sourceToBronze.py     Accident image metadata & content ingestion to Bronze (preferred)
+    05a_accident_images_bronze_fabric.py      Alternative 05a implementation
+    05_import_model.py                        Import/prepare ML model artifacts for severity scoring
+    05b_severity_prediction_bronzeToSilver.py Chunked ML severity scoring & Silver accident table build
+    06_rules_engine.py                        Rules engine (validations; writes gold.gold_insights)
+    07_policy_claims_accident_Goldviews.py    Build Gold dimensions/facts and reporting views (tables + views)
   resource/
-    data_sources/                         Synthetic raw datasets (policies, claims, telematics, images)
-    images/                               Visualization assets
-    Model/                                Placeholder ML model artifacts
-  docs/                                   Additional documentation / PDFs
-  setup/                                  Environment / model initialization scripts
-  README.md                               (this file)
+    data_sources/                             Synthetic raw datasets (policies, claims, telematics, images)
+    guides/                                   Guides for Fabric deployment, Power BI, AI Foundry integration
+    images/                                   Visualization assets
+  FABRIC_PIPELINE_CONFIG.py               Pipeline config to run the notebooks
+  README.md                                   (this file)
 ```
 
 ## 4. Data Layers (Medallion Pattern)
 | Layer  | Purpose | Sample Tables |
 |--------|---------|---------------|
-| Bronze | Raw landed, minimal schema normalization | bronze_claim, bronze_policy, bronze_accident, bronze_telematics |
-| Silver | Cleansed, conformed, enriched (ML severity, rule quality, joins) | silver_policy, silver_claim, silver_accident, silver_claim_policy_accident, silver_claim_policy_telematics |
-| Gold   | Aggregated KPIs, risk indicators, fraud & operational metrics | gold_insights, claim_rules |
+| Bronze | Raw landed, minimal schema normalization | bronze_claim, bronze_policy, bronze_accident, bronze_telematics, bronze_images |
+| Silver | Cleansed, conformed, enriched (ML severity, joins) | silver_policy, silver_claim, silver_accident, silver_claim_policy_location, silver_smart_claims_analytics |
+| Gold   | Governed star schema dimensions/facts + views | dim_date, dim_claim, dim_policy, dim_vehicle, dim_location, dim_risk, fact_claims, fact_telematics, fact_accident_severity, fact_rules, fact_smart_claims, v_claims_summary_by_risk |
 
-Partitioning & Incremental Strategy:
-- Large image-related tables processed incrementally (chunked append) to avoid memory pressure.
-- Partitioning by `partition_date` for cost-efficient pruning in query workloads.
+Governance artifacts (Gold):
+- gold.constraint_audit – metrics validating PK uniqueness and orphan FKs
+- gold.key_metadata – catalog of PK/FK definitions
+
+Key surrogate keys:
+- location_id (GUID) in dim_location and referenced by facts
+- risk_key (surrogate built from severity_category|risk_category|processing_flag|speed_risk_indicator) in dim_risk and referenced by facts
 
 ## 5. Ingestion & Processing Workflow
-1. Run `01_policy_claims_sourceToBronze.py` to land raw policy & claim data into Bronze Delta tables.
-2. (Optional) Run `05a_accident_images_bronze_fabric.py` to ingest accident image metadata/binaries to Bronze.
-3. (Optional / Sim) Run `03_iot.py` for telematics ingestion (batch or simulated stream stub).
-4. Execute `02_policy_claims_bronzeToSilver.py` to standardize & enrich core policy/claim entities into Silver.
-5. Run `04_policy_location.py` for location (geo) enrichment.
-6. Execute `05b_severity_prediction_silver_fabric.py` for incremental severity scoring & Silver accident enrichment.
-7. Apply rules via `06_rules_engine.py` (produces flags / risk metrics).
-8. Create / refresh analytic views with `07_policy_claims_accident_views.sql` (serving / Gold alignment).
-9. Publish Power BI model (Direct Lake) or replicate selected views to Fabric SQL DB.
-10. Schedule notebooks / SQL in a Fabric Pipeline; add monitoring & alerting.
-
-(Note: Real ML model registry import script reference removed; integrate your enterprise model registration process separately if needed.)
+1. Run 01_policy_claims_sourceToBronze.py to land raw policy & claim data into Bronze Delta tables.
+2. (Optional) Run 03_iot.py for telematics ingestion (batch or simulated stream stub).
+3. Execute 02_policy_claims_bronzeToSilver.py to standardize & enrich core entities into Silver.
+4. Run 04_policy_location.py for location (geo) enrichment.
+5. Run 05a_accident_images_sourceToBronze.py to ingest accident image metadata/binaries to Bronze. (Alternative: 05a_accident_images_bronze_fabric.py)
+6. Run 05_import_model.py to import/prepare ML artifacts.
+7. Execute 05b_severity_prediction_bronzeToSilver.py for incremental severity scoring & Silver accident enrichment.
+8. Apply rules via 06_rules_engine.py (produces gold.gold_insights when present).
+9. Build Gold dimensions, facts, and views with 07_policy_claims_accident_Goldviews.py.
+10. Publish a Power BI model (Direct Lake) pointing to Gold tables/views.
+11. Schedule notebooks in a Fabric Pipeline; add monitoring & alerting (see FABRIC_PIPELINE_CONFIG.py).
 
 ## 6. ML & Rules Enrichment
 Severity Model:
-- Simulated predictions now; replace with MLflow registered model or Azure OpenAI Vision scenario.
-- Chunk-based inference: prevents out-of-memory conditions by splitting large image sets.
+- Replaceable with MLflow registered model or Azure OpenAI Vision scenario.
+- Chunk-based inference avoids memory pressure (incremental writes with validation).
 
-Rule Categories (illustrative):
-- Coverage Period Validity
-- Severity Alignment (reported vs predicted)
-- Location Consistency (telematics vs claimed coordinates)
-- Speed / Behavioral Anomalies
-- Policy Limit Breach Flags
+Rules Engine:
+- Validity checks (date, amount), processing flags, and quality indicators.
+- Outputs gold.gold_insights consumed by Gold fact_rules when present.
 
-Outputs:
-- `severity`, `severity_category`, `high_severity_flag`
-- `data_quality_score`
-- `rule_flags` (extendable structure)
+## 7. Gold Semantic Layer
+Physical Delta tables (not just views):
+- Dimensions: gold.dim_date, gold.dim_claim, gold.dim_policy, gold.dim_vehicle, gold.dim_location (PK: location_id GUID), gold.dim_risk (PK: risk_key)
+- Facts: gold.fact_claims, gold.fact_telematics, gold.fact_accident_severity, gold.fact_rules (conditional), gold.fact_smart_claims (wide, for prototyping)
+- Views: gold.v_claims_summary_by_risk, gold.v_smart_claims_dashboard
 
-## 7. Gold KPIs & Metrics (Examples)
-| KPI | Description |
-|-----|-------------|
-| Loss Ratio Components | Paid + LAE vs Earned Premium segments |
-| Severity Mix | Distribution of categorical severity bands |
-| High-Risk Claim Rate | Percentage flagged with multiple anomalies |
-| Fraud Suspect Count | Claims failing selected rule thresholds |
-| Average Cycle Time (extendable) | Requires additional timing fields |
-| Claim Amount per Risk Band | SUM(claim_amount_total) by risk_category |
-| Speed-Severity Correlation | Avg severity vs telematics_speed buckets |
-
-### Gold Semantic Layer Objects
-Materialized Views (schema `gold`):
-- Dimensions: `gold.dim_date`, `gold.dim_claim`, `gold.dim_policy`, `gold.dim_vehicle`, `gold.dim_location`, `gold.dim_risk`
-- Facts: `gold.fact_claims`, `gold.fact_telematics`, `gold.fact_accident_severity`, `gold.fact_rules`, `gold.fact_smart_claims` (wide) 
-- Aggregations: `gold.v_claims_summary_by_risk`, `gold.v_smart_claims_dashboard`
-
-Recommended Power BI model: use star schema (fact_claims central) with conformed keys (claim_no, policy_no, chassis_no, ZIP_CODE, severity_category). Hide wide table if dimensional model adopted.
+Recommended Power BI model:
+- Use star schema as defined in [guides/POWERBI_DASHBOARD_GUIDE.md](https://github.com/alipouw13/fabric-claimsprocessing/blob/main/resource/guides/POWER_BI_DASHBOARD_GUIDE.md)
+- Use fact_telematics and fact_accident_severity for specialized analysis; keep fact_smart_claims hidden after modeling is complete.
 
 ## 8. Reporting (Power BI / SQL)
 Two consumption patterns:
-- Direct Lake on Gold materialized views (reduced latency, star schema ready)
-- Fabric SQL DB replication (optional) for enterprise semantic models, RLS, API reuse
+- Direct Lake on Gold tables/views (recommended)
+- Fabric SQL DB replication (optional) for enterprise semantics/RLS/API reuse
 
-### Power BI Dataset Modeling Steps
-1. Connect to Lakehouse (Direct Lake) and select `gold` schema views.
-2. Import dimension views first, then fact views.
-3. Define relationships:
-   - fact_claims.claim_no  → dim_claim.claim_no (1:* set dim to single)
-   - fact_claims.policy_no → dim_policy.policy_no
-   - fact_claims.chassis_no → dim_vehicle.chassis_no
-   - fact_claims.severity_category → dim_risk.severity_category
-   - fact_claims.claim_date → dim_date.date_key
-   - (Optional) ZIP_CODE → dim_location.ZIP_CODE
-4. Hide surrogate or duplicate columns not needed in visuals.
-5. Mark `dim_date` as date table.
-6. Add DAX measures (see below).
+Power BI Dataset Modeling Steps:
+1. Connect to Lakehouse (Direct Lake) and select Gold tables/views.
+2. Import dimensions first, then facts.
+3. Define relationships as above (use location_id and risk_key).
+4. Mark dim_date as date table; hide raw key columns on facts after relationships.
+5. Add DAX measures (examples [guides/POWERBI_DASHBOARD_GUIDE.md](https://github.com/alipouw13/fabric-claimsprocessing/blob/main/resource/guides/POWER_BI_DASHBOARD_GUIDE.md)).
 
-### Core DAX Measures (Updated)
+Core DAX Measures (examples):
 ```
-Total Claims = COUNT(fact_claims[claim_no])
+Total Claims = DISTINCTCOUNT(fact_claims[claim_no])
 Total Claim Amount = SUM(fact_claims[claim_amount_total])
 Avg Claim Amount = DIVIDE([Total Claim Amount],[Total Claims])
 High Severity Claims = CALCULATE([Total Claims], fact_claims[severity_category] IN {"High","Medium-High"})
 High Severity % = DIVIDE([High Severity Claims],[Total Claims])
-Total Exposure = SUM(fact_claims[sum_insured])
-Severity Index = AVERAGE(fact_claims[severity])
 Risk Weighted Amount = SUMX(fact_claims, fact_claims[claim_amount_total] * fact_claims[severity])
-Release Funds Count = COUNTROWS(FILTER(fact_rules, fact_rules[release_funds] = "release funds"))
-Release Funds % = DIVIDE([Release Funds Count],[Total Claims])
 Avg Telematics Speed = AVERAGE(fact_telematics[telematics_speed])
-Speed Risk Flagged Claims = CALCULATE([Total Claims], fact_claims[speed_risk_indicator] <> "NORMAL_RISK")
-Speed Risk % = DIVIDE([Speed Risk Flagged Claims],[Total Claims])
-Severity vs Speed Corr (Approx) = 
-    VAR t = SUMMARIZE(fact_claims, fact_claims[claim_no], "sev", AVERAGE(fact_claims[severity]), "spd", AVERAGE(fact_claims[telematics_speed]))
-    RETURN 
-    GENERATECOLUMNS( { (CORRX(t[sev], t[spd])) } ) // placeholder if custom correlation measure pattern used
 ```
-(Adjust correlation pattern or use a disconnected calculation table; DAX does not expose CORR natively—implement via statistical pattern if needed.)
 
-### Suggested Visuals
-- KPI Cards: Total Claims, Total Claim Amount, High Severity %, Release Funds %
-- Bar: Claim Amount by Risk Category
-- Line: Severity Index over Month (use dim_date)
-- Scatter: Telematics Speed vs Severity (risk coloring)
-- Map: Claim Count by ZIP_CODE / BOROUGH
-- Matrix: Processing Flag x Risk Category (claim_count, avg_claim_amount)
-
-### Aggregation Strategy
-Leverage `gold.v_claims_summary_by_risk` for high-level cards; Direct Lake will automatically hit summarized view when visual grain matches.
+Suggested visuals:
+- KPI Cards: Total Claims, Total Claim Amount, High Severity %, Loss Ratio (with premium from dim_policy)
+- Column: Claim Amount by Risk Category
+- Line: Claim Amount over Month (dim_date)
+- Scatter: Severity vs Telematics Speed (use fact_telematics)
+- Map: Claims by location_id (dim_location)
 
 ## 9. Governance & Security
-- Column classification (PII: driver, insured contact) via Purview
-- Row / object-level security (e.g., region-based adjuster segregation) enforced in semantic model or SQL DB
-- Lineage tracked from Bronze input file → Gold KPI (audit, compliance, model transparency)
-- Versioned ML models with metadata (who deployed, when, performance snapshot)
+- gold.constraint_audit and gold.key_metadata to monitor PK/FK health
+- Purview for catalog/lineage/classification
+- Optional RLS in semantic model (apply on dimensions)
 
-## 10. Extensibility Roadmap
-| Enhancement | Value |
-|-------------|-------|
-| Real-Time Telematics (Event Stream + KQL) | Sub-second anomaly trigger pipeline |
-| Generative AI Claim Summaries | Adjuster productivity, consistent narratives |
-| Graph / Network Fraud Features | Link analysis for organized fraud rings |
-| Dynamic Reserving Model | Improved accuracy in early lifecycle |
-| External Data Enrichment (Weather / Geo Risk) | Contextual risk scoring |
-
-## 11. Getting Started (Fabric)
+## 10. Getting Started (Fabric)
 1. Create a Fabric Workspace (enable Lakehouse & Data Science experiences)
 2. Connect Git repo (this repository)
 3. Create Lakehouse (set as default)
-4. Place raw data in `Files/resource/data_sources/` (or adapt paths)
-5. Run notebooks sequentially (00_README optional overview first)
-6. Confirm Bronze table creation (`spark.sql("SHOW TABLES")` or Lakehouse UI)
-7. Execute `05b_severity_prediction_silver_fabric.py` – verify incremental severity population
-8. Run `06_rule.py` to apply rules & produce Gold insights
-9. Build Power BI report (Direct Lake) pointing to Gold layer
-10. Configure Pipeline schedule (daily/hourly) & alerts
+4. Place raw data under Files/resource/data_sources/
+5. Run notebooks sequentially (01 -> 04)
+6. Confirm Bronze table creation (SHOW TABLES or Lakehouse UI)
+7. Execute 05a_accident_images_sourceToBronze.py then 05_import_model.py and 05b_severity_prediction_bronzeToSilver.py
+8. Run 06_rules_engine.py to apply rules & persist gold_insights
+9. Run 07_policy_claims_accident_Goldviews.py to build Gold model
+10. Build Power BI report (Direct Lake) pointing to Gold
+11. Configure Pipeline schedule and alerts (see guides)
 
-## 12. Operational Considerations
+## 11. Operational Considerations
 | Aspect | Approach |
 |--------|----------|
-| Incremental Resume | Progress checkpoint file for chunked severity writes |
-| Schema Evolution | `mergeSchema` on append (controlled) |
-| Performance | Partition pruning, OPTIMIZE (when supported), reduced image payload in Silver |
-| Cost Efficiency | Avoid duplicate copies (Direct Lake), selective SQL DB serving |
-| Observability | Add logging & (future) metrics table for pipeline SLA tracking |
+| Incremental Resume | Progress checkpoints for chunked severity writes |
+| Schema Evolution | mergeSchema on append where safe |
+| Performance | Partition pruning; avoid wide table for primary reporting |
+| Cost Efficiency | Zero-copy Direct Lake; selective SQL DB serving |
+| Observability | constraint_audit metrics; logging for pipeline stages |
 
-## 13. Environment Variables / Secrets (if extended)
+## 12. Environment Variables / Secrets (if extended)
 | Key | Purpose |
 |-----|---------|
 | AZURE_AI_FOUNDRY_ENDPOINT | Vision / LLM inference endpoint |
 | AZURE_AI_FOUNDRY_KEY | API key for model inference |
 
-(Integrate via Fabric Workspace credentials / Key Vault connector.)
+(Use Fabric Workspace credentials / Key Vault connectors.)
 
-## 14. Replacing the Simulated Model
-Steps:
-1. Log model run with MLflow in Fabric notebook
-2. Register to model registry (e.g., `damage_severity_model`)
-3. Update config/inference UDF in severity prediction notebook
-4. Use `mlflow.pyfunc.load_model()` (batch) or `spark_udf` for distributed inference
-5. Add monitoring notebook for drift (compare severity distribution month over month)
-
-## 15. Limitations / Notes
+## 13. Limitations / Notes
 - Synthetic dataset (non-production) – replace with governed real data
-- Image binary handling optimized by excluding content from Silver (configurable)
-- No real-time event ingestion implemented (stub for future extension)
+- Image binary content excluded from Silver by default (configurable)
+- Real-time event ingestion not implemented (stub provided)
 
-## 16. License & Attribution
-Original conceptual assets derived from prior open accelerator work; adapted for Microsoft Fabric architecture. See `LICENSE` for details. Third-party libraries retain their respective licenses.
+## 14. License & Attribution
+Original conceptual assets derived from prior open accelerator work; adapted for Microsoft Fabric architecture. Third-party libraries retain their respective licenses.
 
-## 17. Support
-Community / best-effort only. File Issues in repo. No formal SLA.
-
----
-**Next Step:** Run the ingestion notebook and validate Bronze tables before ML severity enrichment.
+## 15. Support
+Community / best-effort only. Potential file issues in repo. No formal SLA.

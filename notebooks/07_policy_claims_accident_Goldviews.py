@@ -289,10 +289,15 @@ _record("dim_claim", "rows", row_cnt)
 _record("dim_claim", "distinct_pk", _distinct)
 _record("dim_claim", "duplicate_pk_rows", row_cnt - _distinct)
 
-# dim_policy (PK: policy_no)
+# dim_policy (PK: policy_no) - dedupe latest snapshot
 _drop_object(f"{GOLD}.dim_policy")
 _dim_policy_sql = f"""
-SELECT DISTINCT
+WITH src AS (
+  SELECT * FROM {SILVER}.silver_smart_claims_analytics WHERE policy_no IS NOT NULL
+), ranked AS (
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY policy_no ORDER BY analytics_created_timestamp DESC) rn FROM src
+)
+SELECT 
   policy_no,
   cust_id AS customer_id,
   driver_age,
@@ -300,8 +305,7 @@ SELECT DISTINCT
   pol_expiry_date,
   premium,
   sum_insured
-FROM {SILVER}.silver_smart_claims_analytics
-WHERE policy_no IS NOT NULL
+FROM ranked WHERE rn = 1
 """
 spark.sql(f"CREATE OR REPLACE TABLE {GOLD}.dim_policy AS {_dim_policy_sql}")
 row_cnt = spark.table(f"{GOLD}.dim_policy").count()
@@ -310,16 +314,20 @@ _record("dim_policy", "rows", row_cnt)
 _record("dim_policy", "distinct_pk", _distinct)
 _record("dim_policy", "duplicate_pk_rows", row_cnt - _distinct)
 
-# dim_vehicle (PK: chassis_no)
+# dim_vehicle (PK: chassis_no) - dedupe latest snapshot
 _drop_object(f"{GOLD}.dim_vehicle")
 _dim_vehicle_sql = f"""
-SELECT DISTINCT
+WITH src AS (
+  SELECT * FROM {SILVER}.silver_smart_claims_analytics WHERE chassis_no IS NOT NULL
+), ranked AS (
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY chassis_no ORDER BY analytics_created_timestamp DESC) rn FROM src
+)
+SELECT 
   chassis_no,
   make,
   model,
   model_year
-FROM {SILVER}.silver_smart_claims_analytics
-WHERE chassis_no IS NOT NULL
+FROM ranked WHERE rn = 1
 """
 spark.sql(f"CREATE OR REPLACE TABLE {GOLD}.dim_vehicle AS {_dim_vehicle_sql}")
 row_cnt = spark.table(f"{GOLD}.dim_vehicle").count()
@@ -328,97 +336,140 @@ _record("dim_vehicle", "rows", row_cnt)
 _record("dim_vehicle", "distinct_pk", _distinct)
 _record("dim_vehicle", "duplicate_pk_rows", row_cnt - _distinct)
 
-# dim_location (composite PK: zip_code, latitude, longitude) - filter where any coordinate present
+# dim_location with surrogate GUID location_id (deterministic hash) PK: location_id
 _drop_object(f"{GOLD}.dim_location")
 _dim_location_sql = f"""
-SELECT DISTINCT
-  zip_code,
-  borough,
-  neighborhood,
-  latitude,
-  longitude
-FROM {SILVER}.silver_smart_claims_analytics
-WHERE zip_code IS NOT NULL OR (latitude IS NOT NULL AND longitude IS NOT NULL)
+WITH base AS (
+  SELECT DISTINCT
+    zip_code,
+    borough,
+    neighborhood,
+    latitude,
+    longitude
+  FROM {SILVER}.silver_smart_claims_analytics
+  WHERE zip_code IS NOT NULL OR (latitude IS NOT NULL AND longitude IS NOT NULL)
+), hashed AS (
+  SELECT *, lower(md5(concat_ws('|', coalesce(zip_code,''), coalesce(cast(latitude as string),''), coalesce(cast(longitude as string),'')))) AS h FROM base
+), guid_fmt AS (
+  SELECT 
+    *,
+    concat(substr(h,1,8),'-',substr(h,9,4),'-',substr(h,13,4),'-',substr(h,17,4),'-',substr(h,21,12)) AS location_id
+  FROM hashed
+)
+SELECT location_id, zip_code, borough, neighborhood, latitude, longitude FROM guid_fmt
 """
 spark.sql(f"CREATE OR REPLACE TABLE {GOLD}.dim_location AS {_dim_location_sql}")
 row_cnt = spark.table(f"{GOLD}.dim_location").count()
-_distinct = spark.sql(f"SELECT COUNT(DISTINCT struct(zip_code, latitude, longitude)) AS d FROM {GOLD}.dim_location").collect()[0].d
+_distinct = spark.sql(f"SELECT COUNT(DISTINCT location_id) AS d FROM {GOLD}.dim_location").collect()[0].d
 _record("dim_location", "rows", row_cnt)
 _record("dim_location", "distinct_pk", _distinct)
 _record("dim_location", "duplicate_pk_rows", row_cnt - _distinct)
 
-# dim_risk (composite PK: severity_category, risk_category, processing_flag, speed_risk_indicator)
+# dim_risk (now with surrogate PK: risk_key) built from distinct combinations
 _drop_object(f"{GOLD}.dim_risk")
 _dim_risk_sql = f"""
-SELECT DISTINCT
-  severity_category,
-  risk_category,
-  processing_flag,
-  speed_risk_indicator
-FROM {SILVER}.silver_smart_claims_analytics
+WITH src AS (
+  SELECT DISTINCT
+    severity_category,
+    risk_category,
+    processing_flag,
+    speed_risk_indicator
+  FROM {SILVER}.silver_smart_claims_analytics
+), keyed AS (
+  SELECT
+    concat_ws('|',
+      coalesce(severity_category,''),
+      coalesce(risk_category,''),
+      coalesce(processing_flag,''),
+      coalesce(speed_risk_indicator,'')
+    ) AS risk_key,
+    severity_category,
+    risk_category,
+    processing_flag,
+    speed_risk_indicator
+  FROM src
+)
+SELECT * FROM keyed
 """
 spark.sql(f"CREATE OR REPLACE TABLE {GOLD}.dim_risk AS {_dim_risk_sql}")
 row_cnt = spark.table(f"{GOLD}.dim_risk").count()
-_distinct = spark.sql(f"SELECT COUNT(DISTINCT struct(severity_category, risk_category, processing_flag, speed_risk_indicator)) AS d FROM {GOLD}.dim_risk").collect()[0].d
+_distinct = spark.sql(f"SELECT COUNT(DISTINCT risk_key) AS d FROM {GOLD}.dim_risk").collect()[0].d
 _record("dim_risk", "rows", row_cnt)
 _record("dim_risk", "distinct_pk", _distinct)
 _record("dim_risk", "duplicate_pk_rows", row_cnt - _distinct)
 
 # Facts
 
-# fact_claims
+# fact_claims (add location_id FK + risk_key)
 _drop_object(f"{GOLD}.fact_claims")
 _fact_claims_sql = f"""
+WITH loc AS (SELECT location_id, zip_code, latitude, longitude FROM {GOLD}.dim_location)
 SELECT 
-  claim_no,
-  policy_no,
-  chassis_no,
-  claim_date,
-  claim_amount_total,
-  claim_amount_vehicle,
-  claim_amount_injury,
-  claim_amount_property,
-  premium,
-  sum_insured,
-  severity,
-  severity_category,
-  risk_category,
-  processing_flag
-FROM {SILVER}.silver_smart_claims_analytics
+  a.claim_no,
+  a.policy_no,
+  a.chassis_no,
+  a.claim_date,
+  a.claim_amount_total,
+  a.claim_amount_vehicle,
+  a.claim_amount_injury,
+  a.claim_amount_property,
+  a.premium,
+  a.sum_insured,
+  a.severity,
+  a.severity_category,
+  a.risk_category,
+  a.processing_flag,
+  a.speed_risk_indicator,
+  concat_ws('|', coalesce(a.severity_category,''), coalesce(a.risk_category,''), coalesce(a.processing_flag,''), coalesce(a.speed_risk_indicator,'')) AS risk_key,
+  l.location_id
+FROM {SILVER}.silver_smart_claims_analytics a
+LEFT JOIN loc l
+  ON ( (a.zip_code <=> l.zip_code) OR (a.latitude <=> l.latitude AND a.longitude <=> l.longitude) )
 """
 spark.sql(f"CREATE OR REPLACE TABLE {GOLD}.fact_claims AS {_fact_claims_sql}")
 _record("fact_claims", "rows", spark.table(f"{GOLD}.fact_claims").count())
 
-# fact_telematics
+# fact_telematics (add location_id + risk_key)
 _drop_object(f"{GOLD}.fact_telematics")
 _fact_telematics_sql = f"""
+WITH loc AS (SELECT location_id, zip_code, latitude, longitude FROM {GOLD}.dim_location)
 SELECT 
-  chassis_no,
-  claim_no,
-  telematics_speed,
-  telematics_speed_std,
-  telematics_latitude,
-  telematics_longitude,
-  accident_telematics_distance_miles,
-  speed_risk_indicator
-FROM {SILVER}.silver_smart_claims_analytics
+  a.chassis_no,
+  a.claim_no,
+  a.telematics_speed,
+  a.telematics_speed_std,
+  a.telematics_latitude,
+  a.telematics_longitude,
+  a.accident_telematics_distance_miles,
+  a.speed_risk_indicator,
+  concat_ws('|', coalesce(a.severity_category,''), coalesce(a.risk_category,''), coalesce(a.processing_flag,''), coalesce(a.speed_risk_indicator,'')) AS risk_key,
+  l.location_id
+FROM {SILVER}.silver_smart_claims_analytics a
+LEFT JOIN loc l
+  ON ( (a.zip_code <=> l.zip_code) OR (a.latitude <=> l.latitude AND a.longitude <=> l.longitude) )
 """
 spark.sql(f"CREATE OR REPLACE TABLE {GOLD}.fact_telematics AS {_fact_telematics_sql}")
 _record("fact_telematics", "rows", spark.table(f"{GOLD}.fact_telematics").count())
 
-# fact_accident_severity
+# fact_accident_severity (add location_id + risk_key)
 _drop_object(f"{GOLD}.fact_accident_severity")
 _fact_accident_severity_sql = f"""
+WITH loc AS (SELECT location_id, zip_code, latitude, longitude FROM {GOLD}.dim_location)
 SELECT 
-  claim_no,
-  chassis_no,
-  severity,
-  severity_category,
-  risk_category,
-  processing_flag,
-  data_source,
-  analytics_created_timestamp
-FROM {SILVER}.silver_smart_claims_analytics
+  a.claim_no,
+  a.chassis_no,
+  a.severity,
+  a.severity_category,
+  a.risk_category,
+  a.processing_flag,
+  a.speed_risk_indicator,
+  concat_ws('|', coalesce(a.severity_category,''), coalesce(a.risk_category,''), coalesce(a.processing_flag,''), coalesce(a.speed_risk_indicator,'')) AS risk_key,
+  a.data_source,
+  a.analytics_created_timestamp,
+  l.location_id
+FROM {SILVER}.silver_smart_claims_analytics a
+LEFT JOIN loc l
+  ON ( (a.zip_code <=> l.zip_code) OR (a.latitude <=> l.latitude AND a.longitude <=> l.longitude) )
 """
 spark.sql(f"CREATE OR REPLACE TABLE {GOLD}.fact_accident_severity AS {_fact_accident_severity_sql}")
 _record("fact_accident_severity", "rows", spark.table(f"{GOLD}.fact_accident_severity").count())
@@ -441,9 +492,17 @@ if table_exists(f"{GOLD}.gold_insights"):
 else:
     print("⚠️ Skipping fact_rules (gold.gold_insights not found yet)")
 
-# fact_smart_claims (full wide table)
+# fact_smart_claims (wide) add risk_key for completeness
 _drop_object(f"{GOLD}.fact_smart_claims")
-_fact_smart_claims_sql = f"SELECT * FROM {SILVER}.silver_smart_claims_analytics"
+_fact_smart_claims_sql = f"""
+WITH loc AS (SELECT location_id, zip_code, latitude, longitude FROM {GOLD}.dim_location)
+SELECT a.*, 
+       concat_ws('|', coalesce(a.severity_category,''), coalesce(a.risk_category,''), coalesce(a.processing_flag,''), coalesce(a.speed_risk_indicator,'')) AS risk_key,
+       l.location_id
+FROM {SILVER}.silver_smart_claims_analytics a
+LEFT JOIN loc l
+  ON ( (a.zip_code <=> l.zip_code) OR (a.latitude <=> l.latitude AND a.longitude <=> l.longitude) )
+"""
 spark.sql(f"CREATE OR REPLACE TABLE {GOLD}.fact_smart_claims AS {_fact_smart_claims_sql}")
 _record("fact_smart_claims", "rows", spark.table(f"{GOLD}.fact_smart_claims").count())
 
@@ -452,10 +511,13 @@ ri_checks = [
     ("fact_claims", "claim_no", "dim_claim", "claim_no"),
     ("fact_claims", "policy_no", "dim_policy", "policy_no"),
     ("fact_claims", "chassis_no", "dim_vehicle", "chassis_no"),
+    ("fact_claims", "risk_key", "dim_risk", "risk_key"),
     ("fact_telematics", "claim_no", "dim_claim", "claim_no"),
     ("fact_telematics", "chassis_no", "dim_vehicle", "chassis_no"),
+    ("fact_telematics", "risk_key", "dim_risk", "risk_key"),
     ("fact_accident_severity", "claim_no", "dim_claim", "claim_no"),
     ("fact_accident_severity", "chassis_no", "dim_vehicle", "chassis_no"),
+    ("fact_accident_severity", "risk_key", "dim_risk", "risk_key"),
 ]
 if table_exists(f"{GOLD}.fact_rules"):
     ri_checks.extend([
@@ -483,6 +545,36 @@ _drop_object(f"{GOLD}.constraint_audit")
 audit_df.write.mode("overwrite").format("delta").saveAsTable(f"{GOLD}.constraint_audit")
 print("✅ Created gold.constraint_audit with" , audit_df.count(), "rows")
 audit_df.show(truncate=False)
+
+# After constraint_audit creation, add key metadata table
+key_metadata = [
+  ("dim_claim", "PK", "claim_no"),
+  ("dim_policy", "PK", "policy_no"),
+  ("dim_vehicle", "PK", "chassis_no"),
+  ("dim_date", "PK", "date_key"),
+  ("dim_location", "PK", "location_id"),
+  ("dim_risk", "PK", "risk_key"),
+  ("fact_claims", "FK", "claim_no->dim_claim.claim_no"),
+  ("fact_claims", "FK", "policy_no->dim_policy.policy_no"),
+  ("fact_claims", "FK", "chassis_no->dim_vehicle.chassis_no"),
+  ("fact_claims", "FK", "location_id->dim_location.location_id"),
+  ("fact_claims", "FK", "risk_key->dim_risk.risk_key"),
+  ("fact_telematics", "FK", "claim_no->dim_claim.claim_no"),
+  ("fact_telematics", "FK", "chassis_no->dim_vehicle.chassis_no"),
+  ("fact_telematics", "FK", "location_id->dim_location.location_id"),
+  ("fact_telematics", "FK", "risk_key->dim_risk.risk_key"),
+  ("fact_accident_severity", "FK", "claim_no->dim_claim.claim_no"),
+  ("fact_accident_severity", "FK", "chassis_no->dim_vehicle.chassis_no"),
+  ("fact_accident_severity", "FK", "location_id->dim_location.location_id"),
+  ("fact_accident_severity", "FK", "risk_key->dim_risk.risk_key"),
+  ("fact_smart_claims", "FK", "location_id->dim_location.location_id"),
+  ("fact_smart_claims", "FK", "risk_key->dim_risk.risk_key"),
+]
+from pyspark.sql import Row as _Row
+km_df = spark.createDataFrame([_Row(entity=e, key_type=kt, definition=d) for e, kt, d in key_metadata])
+_drop_object(f"{GOLD}.key_metadata")
+km_df.write.mode("overwrite").format("delta").saveAsTable(f"{GOLD}.key_metadata")
+print("✅ Created gold.key_metadata with primary/foreign key definitions")
 
 # -----------------------------------------------------------------------------
 # Aggregated reporting views (keep as views/materialized as before)
@@ -558,4 +650,4 @@ FROM {SILVER}.silver_smart_claims_analytics
 """
 create_materialized(f"{GOLD}.v_smart_claims_dashboard", _v_dashboard_body)
 
-print("🏁 Gold view build complete (dimensions/facts as tables with audit)")
+print("🏁 Gold view build complete (dimensions/facts as tables with audit")

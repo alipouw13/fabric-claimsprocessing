@@ -22,28 +22,35 @@ print("🗃️ Setting up claims rules table...")
 try:
     # Drop existing table if it exists (for clean setup)
     spark.sql("DROP TABLE IF EXISTS claims_rules")
-    
-    # Create the rules table
+    # NOTE: Fabric Spark SQL currently does not support 'GENERATED ALWAYS AS IDENTITY' syntax used in Databricks.
+    # We'll manage rule_id manually (monotonic incremental) via helper function.
     create_table_sql = """
     CREATE TABLE claims_rules (
-        rule_id BIGINT GENERATED ALWAYS AS IDENTITY,
-        rule STRING, 
+        rule_id BIGINT,
+        rule STRING,
         check_name STRING,
         check_code STRING,
         check_severity STRING,
         is_active BOOLEAN,
-        created_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
-        updated_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+        created_timestamp TIMESTAMP,
+        updated_timestamp TIMESTAMP
     ) USING DELTA
     """
-    
     spark.sql(create_table_sql)
-    print("✅ Claims rules table created successfully")
-    
-    # Show table structure
+    print("✅ Claims rules table created successfully (manual rule_id management)")
+
+    # Helper to get next rule id
+    def _next_rule_id():
+        try:
+            return spark.sql("SELECT COALESCE(MAX(rule_id),0)+1 AS next_id FROM claims_rules").collect()[0]["next_id"]
+        except Exception:
+            return 1
+
+    # Store helper in globals for later user functions
+    globals()["_next_rule_id"] = _next_rule_id
+
     print("\n📋 Rules table schema:")
     spark.sql("DESCRIBE claims_rules").show()
-    
 except Exception as e:
     logger.error(f"Error creating rules table: {str(e)}")
     raise
@@ -75,14 +82,13 @@ END
 '''
 
 try:
+    rid = _next_rule_id()
     insert_sql = f"""
-    INSERT INTO claims_rules(rule, check_name, check_code, check_severity, is_active) 
-    VALUES('invalid policy date', 'valid_date', '{invalid_policy_date}', 'HIGH', TRUE)
+    INSERT INTO claims_rules(rule_id, rule, check_name, check_code, check_severity, is_active, created_timestamp, updated_timestamp) 
+    VALUES({rid}, 'invalid policy date', 'valid_date', '{invalid_policy_date}', 'HIGH', TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())
     """
-    
     spark.sql(insert_sql)
     print("✅ Policy date validation rule added")
-    
 except Exception as e:
     logger.error(f"Error adding policy date rule: {str(e)}")
 
@@ -103,14 +109,13 @@ END
 '''
 
 try:
+    rid = _next_rule_id()
     insert_sql = f"""
-    INSERT INTO claims_rules(rule, check_name, check_code, check_severity, is_active) 
-    VALUES('exceeds policy amount', 'valid_amount', '{exceeds_policy_amount}', 'HIGH', TRUE)
+    INSERT INTO claims_rules(rule_id, rule, check_name, check_code, check_severity, is_active, created_timestamp, updated_timestamp) 
+    VALUES({rid}, 'exceeds policy amount', 'valid_amount', '{exceeds_policy_amount}', 'HIGH', TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())
     """
-    
     spark.sql(insert_sql)
     print("✅ Policy amount validation rule added")
-    
 except Exception as e:
     logger.error(f"Error adding policy amount rule: {str(e)}")
 
@@ -133,14 +138,13 @@ END
 '''
 
 try:
+    rid = _next_rule_id()
     insert_sql = f"""
-    INSERT INTO claims_rules(rule, check_name, check_code, check_severity, is_active) 
-    VALUES('severity mismatch', 'reported_severity_check', '{severity_mismatch}', 'HIGH', TRUE)
+    INSERT INTO claims_rules(rule_id, rule, check_name, check_code, check_severity, is_active, created_timestamp, updated_timestamp) 
+    VALUES({rid}, 'severity mismatch', 'reported_severity_check', '{severity_mismatch}', 'HIGH', TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())
     """
-    
     spark.sql(insert_sql)
     print("✅ Severity matching rule added")
-    
 except Exception as e:
     logger.error(f"Error adding severity rule: {str(e)}")
 
@@ -161,14 +165,13 @@ END
 '''
 
 try:
+    rid = _next_rule_id()
     insert_sql = f"""
-    INSERT INTO claims_rules(rule, check_name, check_code, check_severity, is_active) 
-    VALUES('exceeds speed', 'speed_check', '{exceeds_speed}', 'HIGH', TRUE)
+    INSERT INTO claims_rules(rule_id, rule, check_name, check_code, check_severity, is_active, created_timestamp, updated_timestamp) 
+    VALUES({rid}, 'exceeds speed', 'speed_check', '{exceeds_speed}', 'HIGH', TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())
     """
-    
     spark.sql(insert_sql)
     print("✅ Speed validation rule added")
-    
 except Exception as e:
     logger.error(f"Error adding speed rule: {str(e)}")
 
@@ -191,14 +194,13 @@ END
 '''
 
 try:
+    rid = _next_rule_id()
     insert_sql = f"""
-    INSERT INTO claims_rules(rule, check_name, check_code, check_severity, is_active) 
-    VALUES('release funds', 'release_funds', '{release_funds}', 'HIGH', TRUE)
+    INSERT INTO claims_rules(rule_id, rule, check_name, check_code, check_severity, is_active, created_timestamp, updated_timestamp) 
+    VALUES({rid}, 'release funds', 'release_funds', '{release_funds}', 'HIGH', TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())
     """
-    
     spark.sql(insert_sql)
     print("✅ Final decision rule added")
-    
 except Exception as e:
     logger.error(f"Error adding final decision rule: {str(e)}")
 

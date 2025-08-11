@@ -7,6 +7,8 @@
 
 # In[1]:
 
+-- Ensure silver schema exists
+CREATE SCHEMA IF NOT EXISTS silver;
 
 -- Set up Spark SQL configuration for Fabric Lakehouse
 SET spark.sql.adaptive.enabled = true;
@@ -16,43 +18,41 @@ SET spark.sql.adaptive.skewJoin.enabled = true;
 
 # In[3]:
 
-
--- Validate source tables exist
-SHOW TABLES LIKE 'silver_*';
+-- Validate source tables exist in silver schema
+SHOW TABLES IN silver LIKE 'silver_%';
 
 -- COMMAND ----------
 -- Check data availability in source tables
 SELECT 
-    'silver_claim_policy_location' as table_name,
+    'silver.silver_claim_policy_location' as table_name,
     COUNT(*) as row_count,
     NULL as unique_chassis,
     COUNT(DISTINCT claim_no) as unique_claims
-FROM silver_claim_policy_location
+FROM silver.silver_claim_policy_location
 
 UNION ALL
 
 SELECT 
-    'silver_telematics' as table_name,
+    'silver.silver_telematics' as table_name,
     COUNT(*) as row_count,
     COUNT(DISTINCT chassis_no) as unique_chassis,
     NULL as unique_claims
-FROM silver_telematics
+FROM silver.silver_telematics
 
 UNION ALL
 
 SELECT 
-    'silver_accident' as table_name,
+    'silver.silver_accident' as table_name,
     COUNT(*) as row_count,
     NULL as unique_chassis,
     COUNT(DISTINCT claim_no) as unique_claims
-FROM silver_accident;
+FROM silver.silver_accident;
 
 
 # In[4]:
 
-
--- Create table with averaged telematics data per vehicle
-CREATE OR REPLACE TABLE silver_claim_policy_telematics_avg
+-- Create table with averaged telematics data per vehicle (in silver schema)
+CREATE OR REPLACE TABLE silver.silver_claim_policy_telematics_avg
 USING DELTA
 AS (
     SELECT 
@@ -63,7 +63,7 @@ AS (
         t.telematics_record_count,
         t.telematics_speed_std,
         t.telematics_latest_timestamp
-    FROM silver_claim_policy_location AS p_c 
+    FROM silver.silver_claim_policy_location AS p_c 
     INNER JOIN (
         SELECT 
             chassis_no,
@@ -73,7 +73,7 @@ AS (
             ROUND(STDDEV(speed), 2) AS telematics_speed_std,
             COUNT(*) AS telematics_record_count,
             MAX(event_timestamp) AS telematics_latest_timestamp
-        FROM silver_telematics
+        FROM silver.silver_telematics
         WHERE chassis_no IS NOT NULL
           AND speed IS NOT NULL
           AND latitude IS NOT NULL
@@ -85,9 +85,8 @@ AS (
 
 # In[6]:
 
-
--- Create table with detailed telematics data (all events)
-CREATE OR REPLACE TABLE silver_claim_policy_telematics
+-- Create table with detailed telematics data (all events) in silver schema
+CREATE OR REPLACE TABLE silver.silver_claim_policy_telematics
 USING DELTA
 AS (
     SELECT 
@@ -107,8 +106,8 @@ AS (
             WHEN t.longitude < -180 OR t.longitude > 180 THEN 'ANOMALY_INVALID_LON'
             ELSE 'VALID'
         END AS data_quality_flag
-    FROM silver_telematics AS t
-    INNER JOIN silver_claim_policy_location AS p_c 
+    FROM silver.silver_telematics AS t
+    INNER JOIN silver.silver_claim_policy_location AS p_c 
         ON p_c.chassis_no = t.chassis_no
     WHERE t.chassis_no IS NOT NULL
       AND t.event_timestamp IS NOT NULL
@@ -117,10 +116,8 @@ AS (
 
 # In[8]:
 
-
--- Create integrated table with accident data
--- Note: Uncommented from original Databricks version for Fabric compatibility
-CREATE OR REPLACE TABLE silver_claim_policy_accident
+-- Create integrated table with accident data in silver schema
+CREATE OR REPLACE TABLE silver.silver_claim_policy_accident
 USING DELTA
 AS (
     SELECT 
@@ -143,18 +140,16 @@ AS (
             WHEN a.severity > 0.9 THEN 'TOTAL_LOSS_CANDIDATE'
             ELSE 'STANDARD_PROCESSING'
         END AS processing_flag
-    FROM silver_claim_policy_telematics_avg AS p_c 
-    LEFT JOIN silver_accident AS a
+    FROM silver.silver_claim_policy_telematics_avg AS p_c 
+    LEFT JOIN silver.silver_accident AS a
         ON p_c.claim_no = a.claim_no
 );
 
 
 # In[14]:
 
-
--- Create comprehensive analytics table
--- Create comprehensive analytics table
-CREATE OR REPLACE TABLE silver_smart_claims_analytics
+-- Create comprehensive analytics table in silver schema
+CREATE OR REPLACE TABLE silver.silver_smart_claims_analytics
 USING DELTA
 AS (
     SELECT 
@@ -162,7 +157,6 @@ AS (
         pca.claim_no,
         pca.CHASSIS_NO,
         pca.policy_no,
-        
         -- Policy information
         pca.CUST_ID,
         pca.driver_age,
@@ -174,94 +168,84 @@ AS (
         pca.MODEL_YEAR,
         pca.suspicious_activity,
         pca.SUM_INSURED,
-        
         -- Claim information
         pca.claim_date,
         pca.claim_amount_total,
         pca.claim_amount_vehicle,
         pca.claim_amount_injury,
         pca.claim_amount_property,
-        
         -- Location information
         pca.latitude,
         pca.longitude,
         pca.BOROUGH,
         pca.NEIGHBORHOOD,
         pca.ZIP_CODE,
-        
         -- Accident severity
         pca.incident_severity,
         pca.severity,
         pca.risk_category,
         pca.processing_flag,
-        
         -- Telematics aggregates
         pca.telematics_latitude,
         pca.telematics_longitude,
         pca.telematics_speed,
         pca.telematics_speed_std,
-        
         -- Calculated risk indicators
         CASE 
             WHEN pca.telematics_speed > 80 AND pca.severity > 0.6 THEN 'HIGH_SPEED_SEVERE'
             WHEN pca.telematics_speed > 60 AND pca.severity > 0.4 THEN 'MODERATE_SPEED_RISK'
             ELSE 'NORMAL_RISK'
         END AS speed_risk_indicator,
-        
         -- Distance calculations (approximate)
         SQRT(
             POW((pca.latitude - pca.telematics_latitude) * 69, 2) + 
             POW((pca.longitude - pca.telematics_longitude) * 54.6, 2)
         ) AS accident_telematics_distance_miles,
-        
         -- Processing metadata
         CURRENT_TIMESTAMP() AS analytics_created_timestamp,
         'fabric_lakehouse' AS data_source
-        
-    FROM silver_claim_policy_accident AS pca
+    FROM silver.silver_claim_policy_accident AS pca
     WHERE pca.claim_no IS NOT NULL
       AND pca.chassis_no IS NOT NULL
 );
 
 
-
 # In[15]:
 
-
--- Validate the integrated data
+-- Validate the integrated data in silver schema
 SELECT 
-    'silver_claim_policy_telematics_avg' AS table_name,
+    'silver.silver_claim_policy_telematics_avg' AS table_name,
     COUNT(*) AS total_records,
     COUNT(DISTINCT chassis_no) AS unique_vehicles,
     COUNT(DISTINCT claim_no) AS unique_claims,
     AVG(telematics_speed) AS avg_speed,
     MIN(telematics_latest_timestamp) AS earliest_telematics,
     MAX(telematics_latest_timestamp) AS latest_telematics
-FROM silver_claim_policy_telematics_avg
+FROM silver.silver_claim_policy_telematics_avg
 
 UNION ALL
 
 SELECT 
-    'silver_claim_policy_telematics' AS table_name,
+    'silver.silver_claim_policy_telematics' AS table_name,
     COUNT(*) AS total_records,
     COUNT(DISTINCT chassis_no) AS unique_vehicles,
     COUNT(DISTINCT claim_no) AS unique_claims,
     AVG(telematics_speed) AS avg_speed,
     MIN(telematics_timestamp) AS earliest_telematics,
     MAX(telematics_timestamp) AS latest_telematics
-FROM silver_claim_policy_telematics
+FROM silver.silver_claim_policy_telematics
 
 UNION ALL
 
 SELECT 
-    'silver_claim_policy_accident' AS table_name,
+    'silver.silver_claim_policy_accident' AS table_name,
     COUNT(*) AS total_records,
     COUNT(DISTINCT chassis_no) AS unique_vehicles,
     COUNT(DISTINCT claim_no) AS unique_claims,
     AVG(CAST(severity AS DOUBLE)) AS avg_severity,
     MIN(accident_processing_timestamp) AS earliest_processing,
     MAX(accident_processing_timestamp) AS latest_processing
-FROM silver_claim_policy_accident;
+FROM silver.silver_claim_policy_accident;
 
 
 # In[ ]:
@@ -303,7 +287,7 @@ SELECT
     ZIP_CODE,
     claim_date,
     analytics_created_timestamp 
-FROM silver_smart_claims_analytics
+FROM silver.silver_smart_claims_analytics;
 
 
 # In[30]:
@@ -319,7 +303,7 @@ SELECT
     AVG(severity) AS avg_severity,
     AVG(telematics_speed) AS avg_speed,
     SUM(claim_amount_total) AS total_exposure
-FROM silver_smart_claims_analytics
+FROM silver.silver_smart_claims_analytics
 GROUP BY risk_category, processing_flag
 ORDER BY total_exposure DESC;
 
@@ -363,7 +347,7 @@ CREATE SCHEMA IF NOT EXISTS gold;
 DROP MATERIALIZED LAKE VIEW IF EXISTS gold.dim_date;
 CREATE MATERIALIZED LAKE VIEW IF NOT EXISTS gold.dim_date AS
 WITH bounds AS (
-  SELECT date(min(claim_date)) AS min_d, date(max(claim_date)) AS max_d FROM silver_smart_claims_analytics
+  SELECT date(min(claim_date)) AS min_d, date(max(claim_date)) AS max_d FROM silver.silver_smart_claims_analytics
 ), calendar AS (
   SELECT explode(sequence(min_d, max_d, interval 1 day)) AS date_key FROM bounds
 )
@@ -394,7 +378,7 @@ SELECT DISTINCT
   premium,
   SUM_INSURED AS sum_insured,
   accident_telematics_distance_miles
-FROM silver_smart_claims_analytics
+FROM silver.silver_smart_claims_analytics
 WHERE claim_no IS NOT NULL;
 
 DROP MATERIALIZED LAKE VIEW IF EXISTS gold.dim_policy;
@@ -407,7 +391,7 @@ SELECT DISTINCT
   pol_expiry_date,
   premium,
   SUM_INSURED AS sum_insured
-FROM silver_smart_claims_analytics
+FROM silver.silver_smart_claims_analytics
 WHERE policy_no IS NOT NULL;
 
 DROP MATERIALIZED LAKE VIEW IF EXISTS gold.dim_vehicle;
@@ -417,7 +401,7 @@ SELECT DISTINCT
   MAKE,
   MODEL,
   MODEL_YEAR
-FROM silver_smart_claims_analytics
+FROM silver.silver_smart_claims_analytics
 WHERE chassis_no IS NOT NULL;
 
 DROP MATERIALIZED LAKE VIEW IF EXISTS gold.dim_location;
@@ -428,7 +412,7 @@ SELECT DISTINCT
   NEIGHBORHOOD,
   latitude,
   longitude
-FROM silver_smart_claims_analytics
+FROM silver.silver_smart_claims_analytics
 WHERE ZIP_CODE IS NOT NULL OR (latitude IS NOT NULL AND longitude IS NOT NULL);
 
 DROP MATERIALIZED LAKE VIEW IF EXISTS gold.dim_risk;
@@ -438,7 +422,7 @@ SELECT DISTINCT
   risk_category,
   processing_flag,
   speed_risk_indicator
-FROM silver_smart_claims_analytics;
+FROM silver.silver_smart_claims_analytics;
 
 -- =============================
 -- GOLD FACT VIEWS
@@ -460,7 +444,7 @@ SELECT
   severity_category,
   risk_category,
   processing_flag
-FROM silver_smart_claims_analytics;
+FROM silver.silver_smart_claims_analytics;
 
 DROP MATERIALIZED LAKE VIEW IF EXISTS gold.fact_telematics;
 CREATE MATERIALIZED LAKE VIEW IF NOT EXISTS gold.fact_telematics AS
@@ -473,7 +457,7 @@ SELECT
   telematics_longitude,
   accident_telematics_distance_miles,
   speed_risk_indicator
-FROM silver_smart_claims_analytics;
+FROM silver.silver_smart_claims_analytics;
 
 DROP MATERIALIZED LAKE VIEW IF EXISTS gold.fact_accident_severity;
 CREATE MATERIALIZED LAKE VIEW IF NOT EXISTS gold.fact_accident_severity AS
@@ -486,7 +470,7 @@ SELECT
   processing_flag,
   data_source,
   analytics_created_timestamp
-FROM silver_smart_claims_analytics;
+FROM silver.silver_smart_claims_analytics;
 
 -- Rules / outcomes fact (requires gold.gold_insights produced by rules engine)
 DROP MATERIALIZED LAKE VIEW IF EXISTS gold.fact_rules;
@@ -505,7 +489,7 @@ FROM gold.gold_insights;
 -- Wide integrated fact (single-table model option)
 DROP MATERIALIZED LAKE VIEW IF EXISTS gold.fact_smart_claims;
 CREATE MATERIALIZED LAKE VIEW IF NOT EXISTS gold.fact_smart_claims AS
-SELECT * FROM silver_smart_claims_analytics;
+SELECT * FROM silver.silver_smart_claims_analytics;
 
 -- =============================
 -- DASHBOARD FRIENDLY AGGREGATIONS
@@ -520,7 +504,7 @@ SELECT
   AVG(severity) AS avg_severity,
   AVG(telematics_speed) AS avg_speed,
   SUM(claim_amount_total) AS total_exposure
-FROM silver_smart_claims_analytics
+FROM silver.silver_smart_claims_analytics
 GROUP BY risk_category, processing_flag;
 
 DROP MATERIALIZED LAKE VIEW IF EXISTS gold.v_smart_claims_dashboard;
@@ -550,5 +534,5 @@ SELECT
     ZIP_CODE,
     claim_date,
     analytics_created_timestamp 
-FROM silver_smart_claims_analytics;
+FROM silver.silver_smart_claims_analytics;
 

@@ -1,24 +1,26 @@
 # Microsoft Fabric Smart Claims Pipeline Deployment Guide
 
-## 🚀 Overview
+## Overview
 
 This guide helps you deploy the Smart Claims solution in Microsoft Fabric using a Medallion (bronze → silver → gold) architecture with star‑schema gold materialized views.
 
-## 📋 Prerequisites
+## Prerequisites
 
 ### Fabric Requirements
-- ✅ Microsoft Fabric workspace with Premium capacity
-- ✅ Contributor or Admin role in the Fabric workspace
+- ✅ Microsoft Fabric workspace (F-SKU)
+- ✅ Contributor role in the Fabric workspace
 - ✅ Lakehouse created for data storage
 - ✅ Git integration enabled (optional but recommended)
 
 ### Data Requirements
+See `resource\data_sources` for all the files below:
+
 - 📄 Claims data (JSON format)
 - 📄 Policy data (CSV format)
 - 📸 Accident images with metadata
 - 📊 Telematics data (Parquet format)
 
-## 🏗️ Architecture Comparison
+## Architecture Comparison
 
 ### Databricks vs Fabric
 | Component | Databricks | Microsoft Fabric |
@@ -30,24 +32,25 @@ This guide helps you deploy the Smart Claims solution in Microsoft Fabric using 
 | **DLT** | Delta Live Tables | Manual Delta Operations |
 | **Dashboards** | Databricks SQL | Power BI |
 
-## 🗂️ File Structure (Updated Logical Layers)
+## File Structure (Updated Logical Layers)
 
 ```
-Fabric Lakehouse Files/
+resource/
 ├── data_sources/
 │   ├── Claims/            # JSON claim files
 │   ├── Policies/          # CSV policy files
 │   ├── Accidents/         # Image files + metadata + image_metadata.csv
 │   └── Telematics/        # Parquet files
+├── guides/                # deployment and use guides
 └── notebooks/             # Imported Fabric notebooks (00–07)
 ```
 
-## 🧱 Medallion Architecture
+## Medallion Architecture
 - Bronze: Raw ingested (claims, policies, telematics, accident images, metadata)
 - Silver: Cleansed & conformed (joined policy/claim, geocoded, telematics curated, accident severity scored incrementally)
 - Gold: Star schema materialized views (dimensions, facts, aggregates) consumed directly by Power BI (Direct Lake)
 
-## 📊 Pipeline Architecture (Updated)
+## Pipeline Architecture (Updated)
 
 ```mermaid
 graph TD
@@ -64,7 +67,7 @@ graph TD
     I --> J[Power BI Star Model]
 ```
 
-## 📒 Notebook Import Order (Updated)
+## Notebook Import Order (Updated)
 | Order | Notebook File | Purpose |
 |-------|---------------|---------|
 | 0 | `00_README.py` | Orientation / optional validation step |
@@ -75,15 +78,15 @@ graph TD
 | 5 | `05a_accident_images_bronze_fabric.py` | Image & metadata ingestion to bronze |
 | 6 | `05b_severity_prediction_bronzeToSilver.py` | Incremental severity scoring to silver_accident |
 | 7 | `06_rules_engine.py` | Business rules producing gold.gold_insights |
-| 8 | `07_policy_claims_accident_Goldviews.sql` | Create gold dimensions, facts, aggregates |
+| 8 | `07_policy_claims_accident_Goldviews.py` | Create gold dimensions, facts, aggregates |
 
-## 🧪 Incremental Severity Pipeline Highlights
+## Incremental Severity Pipeline Highlights
 - Chunks image metadata to avoid OOM
 - Maintains progress checkpoint for idempotent restarts
 - Writes partitioned `silver.silver_accident` (e.g. by ingestion or date)
 - Skips already processed images (idempotent)
 
-## 🛠️ Updated Deployment Steps (Condensed)
+## Deployment Steps (Condensed)
 1. Create Lakehouse & upload source data.
 2. Import notebooks (order above).
 3. Execute 01 → 02 sequentially to build silver baseline.
@@ -92,12 +95,12 @@ graph TD
 6. Run 07 to materialize gold star schema & aggregates.
 7. Connect Power BI to gold views only.
 
-## 🗃️ Gold Star Schema Objects
+## Gold Star Schema Objects
 Dimensions: `gold.dim_date`, `gold.dim_claim`, `gold.dim_policy`, `gold.dim_vehicle`, `gold.dim_location`, `gold.dim_risk`
 Facts: `gold.fact_claims`, `gold.fact_telematics`, `gold.fact_accident_severity`, `gold.fact_rules`, `gold.fact_smart_claims`
 Aggregates: `gold.v_claims_summary_by_risk`, `gold.v_smart_claims_dashboard`
 
-## 🎨 Power BI Integration (Updated)
+## Power BI Integration
 Recommended import (Direct Lake):
 - Dimensions: all `gold.dim_*`
 - Facts: core facts above (choose only needed for model to avoid bloat)
@@ -118,7 +121,7 @@ Claim Processing SLA Breach % = DIVIDE(
 )
 ```
 
-## 🔄 Updated Pipeline Activity JSON (Illustrative)
+## Pipeline Activity JSON (Illustrative)
 ```json
 [
   {"name": "01_source_to_bronze", "type": "Notebook"},
@@ -132,7 +135,7 @@ Claim Processing SLA Breach % = DIVIDE(
 ]
 ```
 
-## ✅ Updated Success Criteria
+## Success Criteria
 - All 9 notebooks executed in order with dependencies satisfied
 - Bronze, silver, and gold schemas populated
 - Incremental severity pipeline completed without reprocessing duplicates
@@ -140,11 +143,11 @@ Claim Processing SLA Breach % = DIVIDE(
 - Power BI model built only on gold layer
 - Rules engine outputs reflected in gold.fact_rules & gold.gold_insights
 
-## 🆘 Additional Troubleshooting (Added)
+## Additional Troubleshooting
 | Issue | Symptom | Resolution |
 |-------|---------|-----------|
 | Duplicate severity rows | Increased row count each rerun | Verify checkpoint path & id column de-dup logic in 05b |
 | Missing gold views | Power BI cannot see gold tables | Re‑run 07 or confirm materialized view creation succeeded |
-| Slow Power BI refresh | High Direct Lake latency | Limit imported columns; ensure star schema relationships |
+| Slow Power BI refresh | High Direct Lake latency | Limit imported columns; ensure star schema relationships; Clear PBI Desktop cache |
 
 *Guide aligned to updated notebook set, medallion layering, and gold star schema.*

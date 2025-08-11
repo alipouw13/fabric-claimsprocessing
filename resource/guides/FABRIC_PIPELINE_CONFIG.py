@@ -59,7 +59,7 @@ print(f"   Lakehouse: {fabric_pipeline_config['parameters']['lakehouse_name']}")
 
 # COMMAND ----------
 
-# Updated pipeline activities to reflect current notebook set (bronze → silver → enrichment → ML → rules → gold views)
+# Updated pipeline activities to reflect current notebook set (bronze → silver → enrichment → ML → rules → gold)
 pipeline_activities = [
     {
         "activity_name": "00_setup_validation",
@@ -112,14 +112,24 @@ pipeline_activities = [
         "parameters": {"batch_size": 100, "rate_limit_delay": 1.0}
     },
     {
-        "activity_name": "05a_images_bronze_ingest",
+        "activity_name": "05a_images_source_to_bronze",
         "type": "Notebook",
         "description": "Accident image metadata & binary ingestion to bronze",
-        "notebook_path": "05a_accident_images_bronze_fabric",
+        "notebook_path": "05a_accident_images_sourceToBronze",
         "timeout_minutes": 60,
         "retry_count": 2,
         "depends_on": ["01_source_to_bronze"],
         "parameters": {"optimize_after_write": True}
+    },
+    {
+        "activity_name": "05_import_model",
+        "type": "Notebook",
+        "description": "Import/prepare ML model artifacts for severity scoring",
+        "notebook_path": "05_import_model",
+        "timeout_minutes": 20,
+        "retry_count": 1,
+        "depends_on": ["01_source_to_bronze"],
+        "parameters": {"register_if_missing": True}
     },
     {
         "activity_name": "05b_severity_prediction",
@@ -128,7 +138,7 @@ pipeline_activities = [
         "notebook_path": "05b_severity_prediction_bronzeToSilver",
         "timeout_minutes": 90,
         "retry_count": 2,
-        "depends_on": ["05a_images_bronze_ingest"],
+        "depends_on": ["05a_images_source_to_bronze", "05_import_model"],
         "parameters": {"force_incremental": True, "include_content": False}
     },
     {
@@ -144,8 +154,8 @@ pipeline_activities = [
     {
         "activity_name": "07_gold_views_materialization",
         "type": "Notebook",
-        "description": "Create gold star-schema materialized views & dashboard aggregates",
-        "notebook_path": "07_policy_claims_accident_Goldviews",  # SQL / notebook hybrid
+        "description": "Create gold star-schema dimensions, facts, and reporting views",
+        "notebook_path": "07_policy_claims_accident_Goldviews",  # Python notebook
         "timeout_minutes": 30,
         "retry_count": 1,
         "depends_on": ["06_rules_engine"],

@@ -60,7 +60,7 @@ Add the following variables to your `FY26INS_env` variable set:
 
 ### From Azure Portal
 1. **Open Azure Portal** (https://portal.azure.com)
-2. **Navigate to your Azure AI service resource**
+2. **Navigate to your Azure AI Foundry resource project**
 3. **Go to "Keys and Endpoint"**
 4. **Copy Key 1 or Key 2 and the Endpoint**
 
@@ -92,12 +92,12 @@ try:
     endpoint = notebookutils.credentials.getSecret("FY26INS_env", "AZURE_AI_FOUNDRY_ENDPOINT")
     key = notebookutils.credentials.getSecret("FY26INS_env", "AZURE_AI_FOUNDRY_KEY")
     
-    print("✅ Credentials successfully retrieved")
+    print("Credentials successfully retrieved")
     print(f"Endpoint: {endpoint[:50]}...")  # Show partial for security
     print(f"Key length: {len(key)} characters")
     
 except Exception as e:
-    print(f"❌ Error accessing credentials: {e}")
+    print(f"Error accessing credentials: {e}")
 ```
 
 ## Step 6: Update ML Configuration

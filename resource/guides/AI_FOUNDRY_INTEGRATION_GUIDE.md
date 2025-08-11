@@ -6,25 +6,25 @@ This guide explains how to integrate Azure AI Foundry models into your Smart Cla
 
 ## Azure AI Foundry Benefits
 
-### 🎯 **Model Catalog Access**
-- **1900+ Models**: Access to Microsoft's curated model catalog including:
+### **Model Catalog Access**
+- **11,000+ Models**: Access to Microsoft's curated model catalog including:
   - Vision models (GPT-4o Vision, Computer Vision APIs)
-  - Language models (GPT-4, Claude, Llama)
+  - Language models (GPT-5, Llama, Mistral...)
   - Specialized insurance/damage assessment models
   - Custom fine-tuned models
 
-### 🚀 **Deployment Options**
+### **Deployment Options**
 - **Serverless**: Pay-per-use, auto-scaling, no infrastructure management
 - **Managed Endpoints**: Dedicated compute with guaranteed throughput
 - **Standard Deployment**: Traditional Azure ML deployment with full control
 
-### 🔧 **Enterprise Features**
+### **Enterprise Features**
 - **Unified API**: Single endpoint for multiple models
 - **Model Evaluation**: Built-in comparison and benchmarking tools
 - **Safety & Compliance**: Content filtering and responsible AI features
 - **Cost Management**: Usage tracking and budget controls
 
-### 📊 **MLflow Integration**
+### **MLflow Integration**
 - **Native Integration**: Azure AI Foundry natively supports MLflow
 - **Model Registry**: Centralized model versioning and lifecycle management
 - **Experiment Tracking**: Log and compare model performance
@@ -48,11 +48,9 @@ ml_config = {
 ```
 
 **Advantages**:
-- ✅ State-of-the-art vision models
-- ✅ No infrastructure management
-- ✅ Enterprise-grade security and compliance
-- ✅ Built-in content filtering and safety
-- ✅ Unified API for multiple models
+- Latest open-source models: chat, vision, embedding, etc.
+- No infrastructure management
+- Enterprise-grade security and compliance
 
 **Implementation Steps**:
 1. Deploy vision model in Azure AI Foundry
@@ -111,7 +109,7 @@ az ml workspace create --name smart-claims-ai --resource-group your-rg
 
 1. **Navigate to Azure AI Foundry Studio**
 2. **Browse Model Catalog**
-   - Search for "vision" or "computer vision"
+   - Search for "vision"
    - Select appropriate model (e.g., GPT-4o Vision)
 3. **Deploy Model**
    - Choose deployment type (Serverless recommended)

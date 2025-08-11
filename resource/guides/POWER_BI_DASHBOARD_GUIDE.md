@@ -155,7 +155,7 @@ Preferred: `fact_telematics` (clean separation). Quick prototyping: `fact_smart_
 ```DAX
 Average Telematics Speed = AVERAGE(fact_telematics[telematics_speed])
 Speed StdDev = AVERAGE(fact_telematics[telematics_speed_std])
-High Speed Risk Claims = CALCULATE([Total Claims], fact_smart_claims[speed_risk_indicator] IN {"HIGH_SPEED_SEVERE","MODERATE_SPEED_RISK"})
+High Speed Risk Claims = CALCULATE([Total Claims], fact_telematics[speed_risk_indicator] IN {"HIGH_SPEED_SEVERE","MODERATE_SPEED_RISK"})
 High Speed Risk % = DIVIDE([High Speed Risk Claims],[Total Claims])
 ```
 
@@ -275,6 +275,19 @@ Add future `dim_geography` or `dim_customer` for territory-based RLS. Apply RLS 
 - Aggregation tables for month/risk summarization.
 - ML-driven propensity / fraud scoring dimension.
 - Calculation groups for time & risk scenario switching.
+
+---
+## Notebook Inventory (Current Repo)
+- 00_README – setup and validation
+- 01_policy_claims_sourceToBronze – ingest claims/policies to bronze
+- 02_policy_claims_bronzeToSilver – normalize to silver
+- 03_iot – ingest and cleanse telematics
+- 04_policy_location – geocoding and location enrichment
+- 05a_accident_images_sourceToBronze – image metadata/binary to bronze (preferred)
+- 05_import_model – import ML artifacts for severity scoring
+- 05b_severity_prediction_bronzeToSilver – incremental severity scoring (writes silver_accident)
+- 06_rules_engine – compute rules outcomes to gold.gold_insights
+- 07_policy_claims_accident_Goldviews – build gold dims/facts/views (risk_key + location_id)
 
 ---
 **Outcome:** A governed, auditable, high-performance semantic model leveraging natural keys, deterministic GUID locations, optional surrogate risk key, and automated integrity telemetry enabling scalable insurance analytics.

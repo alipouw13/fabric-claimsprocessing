@@ -1,0 +1,154 @@
+table dim_claim
+	lineageTag: ea608791-e071-449b-a4e6-d60a21325f06
+
+	column claim_no
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 61b5274e-3b83-4735-b55e-02150a9660e3
+		summarizeBy: none
+		sourceColumn: claim_no
+
+		annotation SummarizationSetBy = Automatic
+
+	column policy_no
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 873fd4df-db36-4550-9793-3f0223b1d3b9
+		summarizeBy: none
+		sourceColumn: policy_no
+
+		annotation SummarizationSetBy = Automatic
+
+	column chassis_no
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 255601d3-2786-43ed-99aa-2392e1b17ef2
+		summarizeBy: none
+		sourceColumn: chassis_no
+
+		annotation SummarizationSetBy = Automatic
+
+	column claim_date
+		dataType: dateTime
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: a11d7c1f-b4b3-4180-b15f-89dd7ccbf3e1
+		summarizeBy: none
+		sourceColumn: claim_date
+
+		variation Variation
+			isDefault
+			relationship: e091cdc6-de96-4d4b-8853-b49202b01efd
+			defaultHierarchy: LocalDateTable_ef2db41b-8b04-42ad-ba5d-8cae81eed4f4.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column severity
+		dataType: double
+		sourceProviderType: float
+		lineageTag: 28227622-cd8b-42e7-9349-0c1ad2b63a73
+		summarizeBy: sum
+		sourceColumn: severity
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column severity_category
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: cdc6c614-198e-484a-8177-4c4269a0962e
+		summarizeBy: none
+		sourceColumn: severity_category
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_category
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: cb34fd68-3534-4193-8ac5-3c4f968dc43c
+		summarizeBy: none
+		sourceColumn: risk_category
+
+		annotation SummarizationSetBy = Automatic
+
+	column processing_flag
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: d54e1462-17f5-4847-bbde-aba65a5dab45
+		summarizeBy: none
+		sourceColumn: processing_flag
+
+		annotation SummarizationSetBy = Automatic
+
+	column suspicious_activity
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: 26047038-9a15-400e-bd03-65a8df1a8310
+		summarizeBy: none
+		sourceColumn: suspicious_activity
+
+		annotation SummarizationSetBy = Automatic
+
+	column premium
+		dataType: double
+		sourceProviderType: float
+		lineageTag: 425916bf-e8f9-4f87-96ad-9464d88825d1
+		summarizeBy: sum
+		sourceColumn: premium
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column sum_insured
+		dataType: double
+		sourceProviderType: float
+		lineageTag: 29c360e2-412d-43b9-9451-6e12b6f4a77b
+		summarizeBy: sum
+		sourceColumn: sum_insured
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column accident_telematics_distance_miles
+		dataType: double
+		sourceProviderType: float
+		lineageTag: 1897f800-7006-4a05-a73e-89e45efdf472
+		summarizeBy: sum
+		sourceColumn: accident_telematics_distance_miles
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column 'Severity Band' =
+			SWITCH(TRUE(),
+			  dim_claim[severity] >= 0.8, "High",
+			  dim_claim[severity] >= 0.6, "Medium-High",
+			  dim_claim[severity] >= 0.4, "Medium",
+			  dim_claim[severity] >= 0.2, "Low-Medium",
+			  "Low"
+			)
+		lineageTag: 03772de8-86b0-478d-86aa-a403d8c6042e
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_claim = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database("ycaavbff4s7epcq5p3h2mhudtq-4tdfsl23hsxupfaenrryenlwyu.datawarehouse.fabric.microsoft.com", "LH_FY26INSAdventureWorks"),
+				    gold_dim_claim = Source{[Schema="gold",Item="dim_claim"]}[Data]
+				in
+				    gold_dim_claim
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

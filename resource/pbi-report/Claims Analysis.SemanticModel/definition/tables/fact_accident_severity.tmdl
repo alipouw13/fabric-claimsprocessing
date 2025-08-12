@@ -1,0 +1,140 @@
+table fact_accident_severity
+	lineageTag: 1393243a-4346-4fe6-bdd1-1a46144d3b96
+
+	column claim_no
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 6bd836ab-7d39-442d-b1ec-045942f1e4ad
+		summarizeBy: none
+		sourceColumn: claim_no
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column chassis_no
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 2779d65f-cd75-4ac8-b2cd-9c957d8bb48a
+		summarizeBy: none
+		sourceColumn: chassis_no
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column severity
+		dataType: double
+		sourceProviderType: float
+		lineageTag: e7113775-41d6-4ee7-a293-dd8c1476780e
+		summarizeBy: sum
+		sourceColumn: severity
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column severity_category
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: dea8dd6e-3088-4f4f-9a81-e99f593c8845
+		summarizeBy: none
+		sourceColumn: severity_category
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_category
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 17247790-cca4-46ca-8148-0722c88485fa
+		summarizeBy: none
+		sourceColumn: risk_category
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column processing_flag
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: b71b375d-131c-47d7-9b87-c237e844917e
+		summarizeBy: none
+		sourceColumn: processing_flag
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_source
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: cac1e275-fcf4-4411-881b-f7954dbd71ee
+		summarizeBy: none
+		sourceColumn: data_source
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column analytics_created_timestamp
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 66dc4160-1855-403e-8d5d-71724f14d1ba
+		summarizeBy: none
+		sourceColumn: analytics_created_timestamp
+
+		variation Variation
+			isDefault
+			relationship: d55c14ed-68c6-4b8f-b7fc-03298eb816f2
+			defaultHierarchy: LocalDateTable_b9b5638a-3120-4029-a706-26cf4c1b0722.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_id
+		dataType: string
+		lineageTag: 943f9921-cddb-465d-afa4-ee58b3975916
+		summarizeBy: none
+		sourceColumn: location_id
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column speed_risk_indicator
+		dataType: string
+		lineageTag: d9cf5ec8-55b3-4a59-9442-456cf5ccd474
+		summarizeBy: none
+		sourceColumn: speed_risk_indicator
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_key
+		dataType: string
+		lineageTag: adcde54d-4056-412d-b6d3-8728b361f9de
+		summarizeBy: none
+		sourceColumn: risk_key
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_accident_severity = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database("ycaavbff4s7epcq5p3h2mhudtq-4tdfsl23hsxupfaenrryenlwyu.datawarehouse.fabric.microsoft.com", "LH_FY26INSAdventureWorks"),
+				    gold_fact_accident_severity = Source{[Schema="gold",Item="fact_accident_severity"]}[Data]
+				in
+				    gold_fact_accident_severity
+
+	changedProperty = IsHidden
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

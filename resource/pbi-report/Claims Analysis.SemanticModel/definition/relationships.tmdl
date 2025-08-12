@@ -1,0 +1,188 @@
+relationship 40c1bdbb-c67f-aecb-ecd4-c5673b0f9429
+	fromColumn: fact_rules.claim_no
+	toColumn: dim_claim.claim_no
+
+relationship 291b8167-7381-6f5b-b825-2bbe463360fe
+	fromColumn: fact_telematics.claim_no
+	toColumn: dim_claim.claim_no
+
+relationship fb711c1a-14f7-43f4-b69d-404f274c1bdf
+	joinOnDateBehavior: datePartOnly
+	fromColumn: v_smart_claims_dashboard.claim_date
+	toColumn: LocalDateTable_e4ea1d9a-c179-48ce-a810-8edcbf2ed152.Date
+
+relationship a7e60d25-2383-4a8a-9396-cce481867955
+	joinOnDateBehavior: datePartOnly
+	fromColumn: v_smart_claims_dashboard.analytics_created_timestamp
+	toColumn: LocalDateTable_a8d1effe-6c87-4ac4-8299-ef1642bfc495.Date
+
+relationship e091cdc6-de96-4d4b-8853-b49202b01efd
+	joinOnDateBehavior: datePartOnly
+	fromColumn: dim_claim.claim_date
+	toColumn: LocalDateTable_ef2db41b-8b04-42ad-ba5d-8cae81eed4f4.Date
+
+relationship 881fd58d-7f61-4988-9dad-ecb5dd3702c1
+	joinOnDateBehavior: datePartOnly
+	fromColumn: dim_policy.pol_issue_date
+	toColumn: LocalDateTable_ededce19-8b7c-4f36-ad1e-1a28588eec28.Date
+
+relationship 9b94deb7-8089-4895-8901-695bb710b243
+	joinOnDateBehavior: datePartOnly
+	fromColumn: dim_policy.pol_expiry_date
+	toColumn: LocalDateTable_0b0ec4f8-830f-4083-a1c8-7ec1a1585467.Date
+
+relationship d55c14ed-68c6-4b8f-b7fc-03298eb816f2
+	joinOnDateBehavior: datePartOnly
+	fromColumn: fact_accident_severity.analytics_created_timestamp
+	toColumn: LocalDateTable_b9b5638a-3120-4029-a706-26cf4c1b0722.Date
+
+relationship e9a16ccc-e8e0-482d-bbcc-0bc05de6a2eb
+	joinOnDateBehavior: datePartOnly
+	fromColumn: fact_rules.rules_processed_timestamp
+	toColumn: LocalDateTable_5d4acaac-3b04-43dd-bd9d-ba207106a66f.Date
+
+relationship 4933714d-efa2-4c34-89db-327836213b8a
+	joinOnDateBehavior: datePartOnly
+	fromColumn: fact_smart_claims.pol_issue_date
+	toColumn: LocalDateTable_a9109a77-df23-4041-a909-d912ec24c844.Date
+
+relationship 9f7f903f-e6c4-42a7-ac30-7a1a3be53266
+	joinOnDateBehavior: datePartOnly
+	fromColumn: fact_smart_claims.pol_expiry_date
+	toColumn: LocalDateTable_3811384a-326d-4ef3-bb4e-5ec3ef46ed69.Date
+
+relationship 1b933d88-cf20-4d8a-8309-fa882d0c9e41
+	joinOnDateBehavior: datePartOnly
+	fromColumn: fact_smart_claims.analytics_created_timestamp
+	toColumn: LocalDateTable_c3d1fce3-cab6-488d-8c87-5e93f315e4c3.Date
+
+relationship bfbe7310-b8c4-43fc-95dd-e0a8b8b5ca5b
+	joinOnDateBehavior: datePartOnly
+	fromColumn: gold_insights.claim_date
+	toColumn: LocalDateTable_8ee032f3-3a90-44ca-b09c-f2e8875c6338.Date
+
+relationship 022b74fe-d4dc-4999-b3b1-8e2bb4a64ce0
+	joinOnDateBehavior: datePartOnly
+	fromColumn: gold_insights.load_timestamp
+	toColumn: LocalDateTable_32ee80a4-b394-4076-8b62-a761f1b0cb05.Date
+
+relationship 198238fb-ad26-4f46-b7d2-7ce8976f6a93
+	joinOnDateBehavior: datePartOnly
+	fromColumn: gold_insights.driver_license_issue_date
+	toColumn: LocalDateTable_f201be66-a5df-4741-aff9-7dee9fb50487.Date
+
+relationship 9ad561f6-433b-406b-bb50-411efbd3bc21
+	joinOnDateBehavior: datePartOnly
+	fromColumn: gold_insights.incident_date
+	toColumn: LocalDateTable_93a15689-5fc2-4ee9-b941-50455d965fe4.Date
+
+relationship b5d45ba2-1ad4-44cd-bc4e-38a2275a692c
+	joinOnDateBehavior: datePartOnly
+	fromColumn: gold_insights.processed_timestamp
+	toColumn: LocalDateTable_0af72f24-48fe-487a-afc8-e912117f9a78.Date
+
+relationship 8ff597c4-2b47-492c-b717-45aa35467d65
+	joinOnDateBehavior: datePartOnly
+	fromColumn: gold_insights.pol_issue_date
+	toColumn: LocalDateTable_b4a05beb-d484-4371-883f-d0b6f57f3a2e.Date
+
+relationship 204b3caf-3a93-424d-8e2a-3a969ca0184b
+	joinOnDateBehavior: datePartOnly
+	fromColumn: gold_insights.pol_eff_date
+	toColumn: LocalDateTable_e0202c07-3aec-42c0-9fdb-bfd84990de2b.Date
+
+relationship 2e9fab1c-4846-4857-a202-41d8bdb9cc5f
+	joinOnDateBehavior: datePartOnly
+	fromColumn: gold_insights.pol_expiry_date
+	toColumn: LocalDateTable_542ceea2-7fe1-4516-ac5b-5c6da0f24066.Date
+
+relationship fcd99390-2705-4054-93de-ea73cbd4c4ac
+	joinOnDateBehavior: datePartOnly
+	fromColumn: gold_insights.policy_load_timestamp
+	toColumn: LocalDateTable_8e3de720-8296-4577-b956-e656aac691c9.Date
+
+relationship 1640762c-618d-45bf-9a40-b530c8f00fdb
+	joinOnDateBehavior: datePartOnly
+	fromColumn: gold_insights.policy_processed_timestamp
+	toColumn: LocalDateTable_e8e375c0-8252-451a-b043-8cdb609a4265.Date
+
+relationship 9b6d4b5c-ae33-45e7-b659-48e73e5e98b3
+	joinOnDateBehavior: datePartOnly
+	fromColumn: gold_insights.join_processed_timestamp
+	toColumn: LocalDateTable_e0174924-6d5b-4d56-8a7c-4cfd860596d0.Date
+
+relationship 7e10d33d-b2fc-458d-b0a5-95cefaa3cf01
+	joinOnDateBehavior: datePartOnly
+	fromColumn: gold_insights.location_processed_timestamp
+	toColumn: LocalDateTable_48f90519-5e0f-4128-93d1-176c3e7c78dc.Date
+
+relationship 16b9f6fb-0312-4ba7-889e-ad4cabb11c77
+	joinOnDateBehavior: datePartOnly
+	fromColumn: gold_insights.rules_processed_timestamp
+	toColumn: LocalDateTable_30e67364-88b6-4865-a0ac-751453013f05.Date
+
+relationship AutoDetected_fecac4ce-ed1f-4539-815c-28706d9457a2
+	fromColumn: fact_telematics.location_id
+	toColumn: dim_location.location_id
+
+relationship 4da10273-869b-47ae-abdc-4cd11d1432e1
+	joinOnDateBehavior: datePartOnly
+	fromColumn: fact_smart_claims.claim_date
+	toColumn: LocalDateTable_44c0a3c7-64fb-4369-990f-efe3df5d2f1a.Date
+
+relationship e4bdb483-7695-a8d9-ec84-834b392aa974
+	fromColumn: fact_claims.chassis_no
+	toColumn: dim_vehicle.chassis_no
+
+relationship b5f6ca8e-af5c-7639-6be6-26594c7b1082
+	fromColumn: fact_claims.policy_no
+	toColumn: dim_policy.policy_no
+
+relationship d88a9ae8-8703-d365-c038-25b9c57ab97a
+	fromColumn: fact_claims.claim_date
+	toColumn: dim_date.date_key
+
+relationship 61c3873c-ae5c-6767-7f17-a7e453a72f41
+	fromColumn: fact_claims.location_id
+	toColumn: dim_location.location_id
+
+relationship 012c3147-18a5-b61b-09ad-28121b357050
+	fromColumn: fact_claims.claim_no
+	toColumn: dim_claim.claim_no
+
+relationship ea38ca34-3dd4-b526-b449-0e38b705d775
+	fromColumn: fact_accident_severity.location_id
+	toColumn: dim_location.location_id
+
+relationship 945bc980-1548-e360-6324-e6c6b05bb94b
+	fromColumn: fact_accident_severity.claim_no
+	toColumn: dim_claim.claim_no
+
+relationship fd888910-0001-2297-287d-3a57b1655b3a
+	fromColumn: fact_rules.policy_no
+	toColumn: dim_policy.policy_no
+
+relationship 29b6e9fd-826b-5f2a-26d5-865d40e04a33
+	fromColumn: fact_rules.chassis_no
+	toColumn: dim_vehicle.chassis_no
+
+relationship 262b807a-2a4e-6e41-363b-7cb33da8ea23
+	fromColumn: fact_accident_severity.chassis_no
+	toColumn: dim_vehicle.chassis_no
+
+relationship 6b43db57-326b-f1de-76a7-2098ac623f1d
+	fromColumn: fact_telematics.chassis_no
+	toColumn: dim_vehicle.chassis_no
+
+relationship AutoDetected_69b76058-62d7-4002-b8e8-aaca36687fd0
+	fromColumn: fact_accident_severity.risk_key
+	toColumn: dim_risk.risk_key
+
+relationship AutoDetected_8a3ceb2f-832e-400b-9ae2-c85f7923d31f
+	fromColumn: fact_claims.risk_key
+	toColumn: dim_risk.risk_key
+
+relationship AutoDetected_4f860e38-3448-48ae-909a-ca840b55d9e3
+	fromColumn: fact_telematics.risk_key
+	toColumn: dim_risk.risk_key
+

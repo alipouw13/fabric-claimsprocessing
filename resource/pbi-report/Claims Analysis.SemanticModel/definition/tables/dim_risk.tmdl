@@ -1,0 +1,60 @@
+table dim_risk
+	lineageTag: f539282f-90a4-47ea-9831-6b3ced13fada
+
+	column severity_category
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: c56e411f-a5d8-4d0e-bfe5-4207c3b5f680
+		summarizeBy: none
+		sourceColumn: severity_category
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_category
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 2b6e08ce-bd25-4d79-9a1e-21ea25cd8a20
+		summarizeBy: none
+		sourceColumn: risk_category
+
+		annotation SummarizationSetBy = Automatic
+
+	column processing_flag
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: e7da5515-8d6f-4215-9e6e-5be65570348f
+		summarizeBy: none
+		sourceColumn: processing_flag
+
+		annotation SummarizationSetBy = Automatic
+
+	column speed_risk_indicator
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: f06d9e54-dc7d-4be9-ac38-512ab8fd6e28
+		summarizeBy: none
+		sourceColumn: speed_risk_indicator
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_key
+		dataType: string
+		lineageTag: be6f9afd-a3a1-416b-9c5a-f3b185222234
+		summarizeBy: none
+		sourceColumn: risk_key
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_risk = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database("ycaavbff4s7epcq5p3h2mhudtq-4tdfsl23hsxupfaenrryenlwyu.datawarehouse.fabric.microsoft.com", "LH_FY26INSAdventureWorks"),
+				    gold_dim_risk = Source{[Schema="gold",Item="dim_risk"]}[Data]
+				in
+				    gold_dim_risk
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

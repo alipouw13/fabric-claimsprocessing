@@ -1,0 +1,527 @@
+table fact_smart_claims
+	isHidden
+	lineageTag: 74d023e5-b1a5-4b37-95ab-df6f3fec1b4c
+
+	column claim_no
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: b336cb1c-dbbd-4fce-86f7-2cf64b126fb8
+		summarizeBy: none
+		sourceColumn: claim_no
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column chassis_no
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 39ade2fd-9783-466a-8bb5-056bca6fd9f8
+		summarizeBy: none
+		sourceColumn: chassis_no
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column policy_no
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 2c8d3be7-acc1-400e-863d-479d3b5a2e52
+		summarizeBy: none
+		sourceColumn: policy_no
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column cust_id
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: d1009621-c847-4ef2-991a-03d9301d8e59
+		summarizeBy: none
+		sourceColumn: cust_id
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column driver_age
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: 634005bf-3861-494a-95a1-f811ef7f8520
+		summarizeBy: sum
+		sourceColumn: driver_age
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column premium
+		dataType: decimal
+		isHidden
+		lineageTag: 60560e62-0a57-4e72-9c65-f7a056503a93
+		summarizeBy: sum
+		sourceColumn: premium
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column pol_issue_date
+		dataType: dateTime
+		isHidden
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: 3f5533b1-12cb-4749-8890-ae0adce00e16
+		summarizeBy: none
+		sourceColumn: pol_issue_date
+
+		variation Variation
+			isDefault
+			relationship: 4933714d-efa2-4c34-89db-327836213b8a
+			defaultHierarchy: LocalDateTable_a9109a77-df23-4041-a909-d912ec24c844.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column pol_expiry_date
+		dataType: dateTime
+		isHidden
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: def90671-12e4-48da-a0b3-4e3aba2f6830
+		summarizeBy: none
+		sourceColumn: pol_expiry_date
+
+		variation Variation
+			isDefault
+			relationship: 9f7f903f-e6c4-42a7-ac30-7a1a3be53266
+			defaultHierarchy: LocalDateTable_3811384a-326d-4ef3-bb4e-5ec3ef46ed69.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column make
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 5e578e6c-0e20-4064-bb2f-5554deb25494
+		summarizeBy: none
+		sourceColumn: make
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column model
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 31c26ecb-fd31-4dc8-9b49-b2beae0bd99e
+		summarizeBy: none
+		sourceColumn: model
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column model_year
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: e7c94449-6660-40d8-9ff7-7d9219d964d3
+		summarizeBy: sum
+		sourceColumn: model_year
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column suspicious_activity
+		dataType: boolean
+		isHidden
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: 0b155ea5-cf04-44f5-9b8e-554db92a3403
+		summarizeBy: none
+		sourceColumn: suspicious_activity
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column sum_insured
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: 2b6ee7a1-3727-44cb-b808-a064b82205b8
+		summarizeBy: sum
+		sourceColumn: sum_insured
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column claim_date
+		dataType: dateTime
+		isHidden
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: ccb4ce1b-ba08-4d62-bee3-79c0227be036
+		summarizeBy: none
+		sourceColumn: claim_date
+
+		variation Variation
+			isDefault
+			relationship: 4da10273-869b-47ae-abdc-4cd11d1432e1
+			defaultHierarchy: LocalDateTable_44c0a3c7-64fb-4369-990f-efe3df5d2f1a.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column claim_amount_total
+		dataType: decimal
+		isHidden
+		formatString: 0
+		lineageTag: 08168b83-ddca-4b98-ac8b-d7fff2ef0a3b
+		summarizeBy: sum
+		sourceColumn: claim_amount_total
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column claim_amount_vehicle
+		dataType: decimal
+		isHidden
+		formatString: 0
+		lineageTag: f23115fe-9c76-4361-9877-26f83f0b7039
+		summarizeBy: sum
+		sourceColumn: claim_amount_vehicle
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column claim_amount_injury
+		dataType: decimal
+		isHidden
+		formatString: 0
+		lineageTag: 5bb198fb-7413-41de-836b-c992b72448ca
+		summarizeBy: sum
+		sourceColumn: claim_amount_injury
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column claim_amount_property
+		dataType: decimal
+		isHidden
+		formatString: 0
+		lineageTag: c0828e5c-9c3c-4984-8c44-caafcd3ee79d
+		summarizeBy: sum
+		sourceColumn: claim_amount_property
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column latitude
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: 88609763-fbc6-445b-83b0-3aed21418fe1
+		summarizeBy: sum
+		sourceColumn: latitude
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column longitude
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: 2fc619da-12df-43ac-a041-1e14ad60e1e1
+		summarizeBy: sum
+		sourceColumn: longitude
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column borough
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 05386657-0c9f-4efe-8fe4-410801c2a261
+		summarizeBy: none
+		sourceColumn: borough
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column neighborhood
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 2cfe0665-7c30-4bf4-97b2-8da8f0d0806b
+		summarizeBy: none
+		sourceColumn: neighborhood
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column zip_code
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: 048b0a61-9c50-49af-8876-648e561f4261
+		summarizeBy: sum
+		sourceColumn: zip_code
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column incident_severity
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 880201fa-603f-48ae-a09b-8832eabcb21f
+		summarizeBy: none
+		sourceColumn: incident_severity
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column severity
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: 27f6d5ee-bec0-4661-a641-5883e21b1293
+		summarizeBy: sum
+		sourceColumn: severity
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column severity_category
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 51defe55-e2be-4004-9dc7-44047012b78b
+		summarizeBy: none
+		sourceColumn: severity_category
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_category
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: b0b6ae4b-6337-44b0-8a4b-a238d6f32d66
+		summarizeBy: none
+		sourceColumn: risk_category
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column processing_flag
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 08e453aa-f390-491d-b5f5-ae337b097d19
+		summarizeBy: none
+		sourceColumn: processing_flag
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column telematics_latitude
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: 85e80dd3-1c1b-486c-8651-88fecd14f445
+		summarizeBy: sum
+		sourceColumn: telematics_latitude
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column telematics_longitude
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: 631f92c9-51bb-4bce-a025-f49b85051363
+		summarizeBy: sum
+		sourceColumn: telematics_longitude
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column telematics_speed
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: 439631dc-e01c-4aa8-b350-60a94455f1fa
+		summarizeBy: sum
+		sourceColumn: telematics_speed
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column telematics_speed_std
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: af77fdeb-7e23-470c-acf7-7a2a876c3859
+		summarizeBy: sum
+		sourceColumn: telematics_speed_std
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column speed_risk_indicator
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: eb369484-e5df-4cef-bd4a-10b68a3502a6
+		summarizeBy: none
+		sourceColumn: speed_risk_indicator
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column accident_telematics_distance_miles
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: f10f2010-01dc-4beb-95a0-11e7e8d7f321
+		summarizeBy: sum
+		sourceColumn: accident_telematics_distance_miles
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column analytics_created_timestamp
+		dataType: dateTime
+		isHidden
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: cea1d2b5-6030-4c81-ab7d-46404c8ae7db
+		summarizeBy: none
+		sourceColumn: analytics_created_timestamp
+
+		variation Variation
+			isDefault
+			relationship: 1b933d88-cf20-4d8a-8309-fa882d0c9e41
+			defaultHierarchy: LocalDateTable_c3d1fce3-cab6-488d-8c87-5e93f315e4c3.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_source
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 7054b14c-cf96-4685-874c-27689c92e0c9
+		summarizeBy: none
+		sourceColumn: data_source
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_id
+		dataType: string
+		isHidden
+		lineageTag: 770d6e9a-1470-400c-938f-3594e5e86b3c
+		summarizeBy: none
+		sourceColumn: location_id
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_key
+		dataType: string
+		lineageTag: 208f3fe0-dcaa-4208-90c3-3d31afdfad6e
+		summarizeBy: none
+		sourceColumn: risk_key
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_smart_claims = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database("ycaavbff4s7epcq5p3h2mhudtq-4tdfsl23hsxupfaenrryenlwyu.datawarehouse.fabric.microsoft.com", "LH_FY26INSAdventureWorks"),
+				    gold_fact_smart_claims = Source{[Schema="gold",Item="fact_smart_claims"]}[Data],
+				    #"Changed Type" = Table.TransformColumnTypes(gold_fact_smart_claims,{{"premium", Currency.Type}, {"claim_amount_total", Currency.Type}, {"claim_amount_vehicle", Currency.Type}, {"claim_amount_injury", Currency.Type}, {"claim_amount_property", Currency.Type}})
+				in
+				    #"Changed Type"
+
+	changedProperty = IsHidden
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

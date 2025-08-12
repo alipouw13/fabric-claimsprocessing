@@ -1,0 +1,114 @@
+table fact_telematics
+	lineageTag: c120db5f-f3f5-4e19-98c3-e8fb8d02b0ca
+
+	column chassis_no
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 0b6bebae-dd41-4230-853a-bb376ddbfbd2
+		summarizeBy: none
+		sourceColumn: chassis_no
+
+		annotation SummarizationSetBy = Automatic
+
+	column claim_no
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: bc7313fb-11b3-4273-812a-1572910ce2fa
+		summarizeBy: none
+		sourceColumn: claim_no
+
+		annotation SummarizationSetBy = Automatic
+
+	column telematics_speed
+		dataType: double
+		sourceProviderType: float
+		lineageTag: 7d99b8be-69c6-4aa8-bf3b-c862ce763b1e
+		summarizeBy: sum
+		sourceColumn: telematics_speed
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column telematics_speed_std
+		dataType: double
+		sourceProviderType: float
+		lineageTag: f2f97e18-0c4c-4755-a1b4-b4c5224cda1d
+		summarizeBy: sum
+		sourceColumn: telematics_speed_std
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column telematics_latitude
+		dataType: double
+		sourceProviderType: float
+		lineageTag: 08135dae-d779-4032-9cdc-0b91b3803d38
+		summarizeBy: sum
+		sourceColumn: telematics_latitude
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column telematics_longitude
+		dataType: double
+		sourceProviderType: float
+		lineageTag: fca3d361-b204-4c70-beb2-2c3516ae32e1
+		summarizeBy: sum
+		sourceColumn: telematics_longitude
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column accident_telematics_distance_miles
+		dataType: double
+		sourceProviderType: float
+		lineageTag: 7d308373-304a-4b75-ace1-65a3c0e6d8f6
+		summarizeBy: sum
+		sourceColumn: accident_telematics_distance_miles
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column speed_risk_indicator
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 0ece8a0c-b1f2-4806-9cbe-768019740254
+		summarizeBy: none
+		sourceColumn: speed_risk_indicator
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_id
+		dataType: string
+		lineageTag: 3b390661-6c51-4700-8523-49a1c180425b
+		summarizeBy: none
+		sourceColumn: location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_key
+		dataType: string
+		lineageTag: f9b166ab-998e-4df1-b4a5-be5eab24575f
+		summarizeBy: none
+		sourceColumn: risk_key
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_telematics = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database("ycaavbff4s7epcq5p3h2mhudtq-4tdfsl23hsxupfaenrryenlwyu.datawarehouse.fabric.microsoft.com", "LH_FY26INSAdventureWorks"),
+				    gold_fact_telematics = Source{[Schema="gold",Item="fact_telematics"]}[Data]
+				in
+				    gold_fact_telematics
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

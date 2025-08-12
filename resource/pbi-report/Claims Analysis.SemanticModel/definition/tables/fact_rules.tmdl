@@ -1,0 +1,76 @@
+table fact_rules
+	lineageTag: 96bd20f9-2e31-4460-a534-e08dc9ca6695
+
+	column claim_no
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: c6c55223-50fa-4a0c-9880-abcf61a7bdc1
+		summarizeBy: none
+		sourceColumn: claim_no
+
+		annotation SummarizationSetBy = Automatic
+
+	column policy_no
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: d872fbc5-a6e2-4433-8470-8cb2107dab72
+		summarizeBy: none
+		sourceColumn: policy_no
+
+		annotation SummarizationSetBy = Automatic
+
+	column chassis_no
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 5e36d5eb-e2f2-45ba-9c0e-92c3f5bc99e4
+		summarizeBy: none
+		sourceColumn: chassis_no
+
+		annotation SummarizationSetBy = Automatic
+
+	column valid_date
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 32a7927f-4b29-4c2b-82b6-43281437761c
+		summarizeBy: none
+		sourceColumn: valid_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column valid_amount
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 8e34192d-e51f-4398-88fd-02ec96bac2b9
+		summarizeBy: none
+		sourceColumn: valid_amount
+
+		annotation SummarizationSetBy = Automatic
+
+	column rules_processed_timestamp
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: de32178e-1b79-4e61-baf3-a7ec20a826fb
+		summarizeBy: none
+		sourceColumn: rules_processed_timestamp
+
+		variation Variation
+			isDefault
+			relationship: e9a16ccc-e8e0-482d-bbcc-0bc05de6a2eb
+			defaultHierarchy: LocalDateTable_5d4acaac-3b04-43dd-bd9d-ba207106a66f.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_rules = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database("ycaavbff4s7epcq5p3h2mhudtq-4tdfsl23hsxupfaenrryenlwyu.datawarehouse.fabric.microsoft.com", "LH_FY26INSAdventureWorks"),
+				    gold_fact_rules = Source{[Schema="gold",Item="fact_rules"]}[Data]
+				in
+				    gold_fact_rules
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

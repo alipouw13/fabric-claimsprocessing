@@ -1,0 +1,75 @@
+table dim_location
+	lineageTag: a50ea250-b90d-42b6-ab5f-6825fb3f55b8
+
+	column zip_code
+		dataType: double
+		sourceProviderType: float
+		lineageTag: 170b9354-b91f-4f39-8d82-74f68752be7a
+		summarizeBy: sum
+		sourceColumn: zip_code
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column borough
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 0fbdc40a-1df5-484b-8077-8630d56f8f33
+		summarizeBy: none
+		sourceColumn: borough
+
+		annotation SummarizationSetBy = Automatic
+
+	column neighborhood
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 2a3dda7f-6dfd-48f8-aa6b-dd59229c5a15
+		summarizeBy: none
+		sourceColumn: neighborhood
+
+		annotation SummarizationSetBy = Automatic
+
+	column latitude
+		dataType: double
+		sourceProviderType: float
+		lineageTag: a00781ab-39e5-4ef6-b4e8-053ea3c8b283
+		summarizeBy: sum
+		sourceColumn: latitude
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column longitude
+		dataType: double
+		sourceProviderType: float
+		lineageTag: f8066005-9048-4363-bb99-fff1b05a9d40
+		summarizeBy: sum
+		sourceColumn: longitude
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column location_id
+		dataType: string
+		lineageTag: 0a5d247f-acc3-431b-bf99-7d5d7a4527e0
+		summarizeBy: none
+		sourceColumn: location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_location = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database("ycaavbff4s7epcq5p3h2mhudtq-4tdfsl23hsxupfaenrryenlwyu.datawarehouse.fabric.microsoft.com", "LH_FY26INSAdventureWorks"),
+				    gold_dim_location = Source{[Schema="gold",Item="dim_location"]}[Data]
+				in
+				    gold_dim_location
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

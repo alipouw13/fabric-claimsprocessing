@@ -1,0 +1,755 @@
+table gold_insights
+	isHidden
+	lineageTag: 8ba3ca0c-b253-457c-b0de-ce3e36084a38
+
+	column address
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: bd4ef78d-947c-482c-b091-0c261fc356c4
+		summarizeBy: none
+		sourceColumn: address
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column policy_no
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 2b635374-f8af-4326-a742-9c40684f2906
+		summarizeBy: none
+		sourceColumn: policy_no
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column claim_date
+		dataType: dateTime
+		isHidden
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: 3590cf12-d4b3-40fd-826f-3aeff0710952
+		summarizeBy: none
+		sourceColumn: claim_date
+
+		variation Variation
+			isDefault
+			relationship: bfbe7310-b8c4-43fc-95dd-e0a8b8b5ca5b
+			defaultHierarchy: LocalDateTable_8ee032f3-3a90-44ca-b09c-f2e8875c6338.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column claim_no
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: f87b66b9-864d-47f0-b0fb-4001f8048d1a
+		summarizeBy: none
+		sourceColumn: claim_no
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column months_as_customer
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: 35133307-2400-40e2-bd82-38aca710fbef
+		summarizeBy: sum
+		sourceColumn: months_as_customer
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column number_of_witnesses
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: b6bcf80b-496f-41db-8a71-0f3c4d60d0dc
+		summarizeBy: sum
+		sourceColumn: number_of_witnesses
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column suspicious_activity
+		dataType: boolean
+		isHidden
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: 477c39c4-d90c-43e5-95ac-b2b6bb17e4d0
+		summarizeBy: none
+		sourceColumn: suspicious_activity
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column load_timestamp
+		dataType: dateTime
+		isHidden
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 86a938b0-114e-48b5-ac24-5240508fe499
+		summarizeBy: none
+		sourceColumn: load_timestamp
+
+		variation Variation
+			isDefault
+			relationship: 022b74fe-d4dc-4999-b3b1-8e2bb4a64ce0
+			defaultHierarchy: LocalDateTable_32ee80a4-b394-4076-8b62-a761f1b0cb05.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column source_file
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 62f8c67d-64a7-4857-930a-24c24c690ccb
+		summarizeBy: none
+		sourceColumn: source_file
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column claim_amount_injury
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: c4fbcb92-7226-4cdc-a9bc-a0a908bab965
+		summarizeBy: sum
+		sourceColumn: claim_amount_injury
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column claim_amount_property
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: 06cf04ee-475e-47b6-86a3-217678d98f67
+		summarizeBy: sum
+		sourceColumn: claim_amount_property
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column claim_amount_total
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: fb65af37-9243-4c8b-8b10-029fd21f9578
+		summarizeBy: sum
+		sourceColumn: claim_amount_total
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column claim_amount_vehicle
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: 5db78fb0-a771-489e-9994-615fe4b22951
+		summarizeBy: sum
+		sourceColumn: claim_amount_vehicle
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column collision_number_of_vehicles_involved
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: b16b413c-af3d-40d9-9fe0-3ea4862ea5b0
+		summarizeBy: sum
+		sourceColumn: collision_number_of_vehicles_involved
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column collision_type
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: ea899f79-56bd-4eb2-af98-0cafc7f64db5
+		summarizeBy: none
+		sourceColumn: collision_type
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column driver_age
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: d91e1792-6668-4135-8bad-c7d3a425e276
+		summarizeBy: sum
+		sourceColumn: driver_age
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column driver_insured_relationship
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: dd538147-1aeb-4f0f-8afa-4b0fdc854fd8
+		summarizeBy: none
+		sourceColumn: driver_insured_relationship
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column driver_license_issue_date
+		dataType: dateTime
+		isHidden
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: 368e2c31-8c5d-460b-a435-11fa0a486e8c
+		summarizeBy: none
+		sourceColumn: driver_license_issue_date
+
+		variation Variation
+			isDefault
+			relationship: 198238fb-ad26-4f46-b7d2-7ce8976f6a93
+			defaultHierarchy: LocalDateTable_f201be66-a5df-4741-aff9-7dee9fb50487.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column incident_date
+		dataType: dateTime
+		isHidden
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: 9f36efa2-52ee-4716-b530-1aa51b2e3f2b
+		summarizeBy: none
+		sourceColumn: incident_date
+
+		variation Variation
+			isDefault
+			relationship: 9ad561f6-433b-406b-bb50-411efbd3bc21
+			defaultHierarchy: LocalDateTable_93a15689-5fc2-4ee9-b941-50455d965fe4.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column incident_hour
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: 53e859fd-dc98-43bf-981f-28e8f9719299
+		summarizeBy: sum
+		sourceColumn: incident_hour
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column incident_severity
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 8880da4a-fd47-4f4d-a8de-7337a73434d7
+		summarizeBy: none
+		sourceColumn: incident_severity
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column incident_type
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: da1bf193-a9c6-4433-bf6e-21fed2a526cc
+		summarizeBy: none
+		sourceColumn: incident_type
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column processed_timestamp
+		dataType: dateTime
+		isHidden
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 853cf0af-a66c-47c7-acb6-c51c680022ea
+		summarizeBy: none
+		sourceColumn: processed_timestamp
+
+		variation Variation
+			isDefault
+			relationship: b5d45ba2-1ad4-44cd-bc4e-38a2275a692c
+			defaultHierarchy: LocalDateTable_0af72f24-48fe-487a-afc8-e912117f9a78.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column CUST_ID
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 4ed0e7ae-08b2-4536-b3fb-a376358f945c
+		summarizeBy: none
+		sourceColumn: CUST_ID
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column POLICYTYPE
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 0a17ab18-ddbd-4855-8bcb-0123c243de5b
+		summarizeBy: none
+		sourceColumn: POLICYTYPE
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column pol_issue_date
+		dataType: dateTime
+		isHidden
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: d414d935-4d64-4de7-8506-84bb76d1f007
+		summarizeBy: none
+		sourceColumn: pol_issue_date
+
+		variation Variation
+			isDefault
+			relationship: 8ff597c4-2b47-492c-b717-45aa35467d65
+			defaultHierarchy: LocalDateTable_b4a05beb-d484-4371-883f-d0b6f57f3a2e.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column pol_eff_date
+		dataType: dateTime
+		isHidden
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: 392c6c65-02b5-4a13-9f7d-b729db502ea7
+		summarizeBy: none
+		sourceColumn: pol_eff_date
+
+		variation Variation
+			isDefault
+			relationship: 204b3caf-3a93-424d-8e2a-3a969ca0184b
+			defaultHierarchy: LocalDateTable_e0202c07-3aec-42c0-9fdb-bfd84990de2b.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column pol_expiry_date
+		dataType: dateTime
+		isHidden
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: c53bc564-8e9c-43b9-81c6-8fb440d071ae
+		summarizeBy: none
+		sourceColumn: pol_expiry_date
+
+		variation Variation
+			isDefault
+			relationship: 2e9fab1c-4846-4857-a202-41d8bdb9cc5f
+			defaultHierarchy: LocalDateTable_542ceea2-7fe1-4516-ac5b-5c6da0f24066.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column BODY
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 072e7bc5-0f1d-4cc1-aa56-d5e060537da1
+		summarizeBy: none
+		sourceColumn: BODY
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column MAKE
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: ae5315db-db04-437b-beaa-8f5290aacf93
+		summarizeBy: none
+		sourceColumn: MAKE
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column MODEL
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 8a0309a9-b686-44a0-ab05-e7fc9a8715f5
+		summarizeBy: none
+		sourceColumn: MODEL
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column MODEL_YEAR
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: 4140b7f6-47e5-4930-971d-cdc9f28bd5c8
+		summarizeBy: sum
+		sourceColumn: MODEL_YEAR
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column CHASSIS_NO
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 92c92c0d-1657-45ea-a888-9b539d8865fa
+		summarizeBy: none
+		sourceColumn: CHASSIS_NO
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column USE_OF_VEHICLE
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 32908d9d-9fbb-4429-bdcc-829aa81d6ee0
+		summarizeBy: none
+		sourceColumn: USE_OF_VEHICLE
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column DRV_DOB
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 1e276a59-7cec-4339-b089-6ee5e5cbac3b
+		summarizeBy: none
+		sourceColumn: DRV_DOB
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column BOROUGH
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 3a6994e0-1041-46fb-810b-2437c6fb3555
+		summarizeBy: none
+		sourceColumn: BOROUGH
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column NEIGHBORHOOD
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 8261c183-1e42-4a89-a9b5-61c601d34b85
+		summarizeBy: none
+		sourceColumn: NEIGHBORHOOD
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column ZIP_CODE
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: 1121dfb3-8ddc-43a3-b4eb-7342829222dd
+		summarizeBy: sum
+		sourceColumn: ZIP_CODE
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column PRODUCT
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: f9d6f1db-3c93-4d07-8c42-f09d50386438
+		summarizeBy: none
+		sourceColumn: PRODUCT
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column SUM_INSURED
+		dataType: decimal
+		isHidden
+		lineageTag: 2dee70c5-b403-433d-95ef-ca1d59526f75
+		summarizeBy: sum
+		sourceColumn: SUM_INSURED
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column premium
+		dataType: decimal
+		isHidden
+		lineageTag: 40686e4f-303d-49e8-aabd-789552bb95d7
+		summarizeBy: sum
+		sourceColumn: premium
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column DEDUCTABLE
+		dataType: decimal
+		isHidden
+		formatString: 0
+		lineageTag: 7a541a9b-73a5-4b95-91db-52bb2ce5f51c
+		summarizeBy: sum
+		sourceColumn: DEDUCTABLE
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column policy_load_timestamp
+		dataType: dateTime
+		isHidden
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: b82d8041-b9e1-468b-bff7-31b0ece34b26
+		summarizeBy: none
+		sourceColumn: policy_load_timestamp
+
+		variation Variation
+			isDefault
+			relationship: fcd99390-2705-4054-93de-ea73cbd4c4ac
+			defaultHierarchy: LocalDateTable_8e3de720-8296-4577-b956-e656aac691c9.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column policy_source_file
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: dad3af81-c6d6-43a9-a298-5c79f5427835
+		summarizeBy: none
+		sourceColumn: policy_source_file
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column policy_processed_timestamp
+		dataType: dateTime
+		isHidden
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 469d87de-4d3f-40d7-8f66-3e9ce101997b
+		summarizeBy: none
+		sourceColumn: policy_processed_timestamp
+
+		variation Variation
+			isDefault
+			relationship: 1640762c-618d-45bf-9a40-b530c8f00fdb
+			defaultHierarchy: LocalDateTable_e8e375c0-8252-451a-b043-8cdb609a4265.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column join_processed_timestamp
+		dataType: dateTime
+		isHidden
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: ef8fdb3a-8dbe-4f33-b523-f2d38b827bf4
+		summarizeBy: none
+		sourceColumn: join_processed_timestamp
+
+		variation Variation
+			isDefault
+			relationship: 9b6d4b5c-ae33-45e7-b659-48e73e5e98b3
+			defaultHierarchy: LocalDateTable_e0174924-6d5b-4d56-8a7c-4cfd860596d0.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column latitude
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: f883020f-1278-45da-963e-2d32e56504fb
+		summarizeBy: sum
+		sourceColumn: latitude
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column longitude
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: dcb7eaf3-4fb1-4a64-9182-e06b6f86cd2b
+		summarizeBy: sum
+		sourceColumn: longitude
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column location_processed_timestamp
+		dataType: dateTime
+		isHidden
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: ba3c2c55-00c0-4529-8f40-b29f10684628
+		summarizeBy: none
+		sourceColumn: location_processed_timestamp
+
+		variation Variation
+			isDefault
+			relationship: 7e10d33d-b2fc-458d-b0a5-95cefaa3cf01
+			defaultHierarchy: LocalDateTable_48f90519-5e0f-4128-93d1-176c3e7c78dc.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column valid_date
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: c0c2661d-339f-42fe-bff7-f2b6c5f84ac3
+		summarizeBy: none
+		sourceColumn: valid_date
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column valid_amount
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: f586a1a8-37fc-46d7-9022-77fb2382cbfd
+		summarizeBy: none
+		sourceColumn: valid_amount
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column rules_processed_timestamp
+		dataType: dateTime
+		isHidden
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 9c2a17d7-47bf-49fa-a74d-747d91848809
+		summarizeBy: none
+		sourceColumn: rules_processed_timestamp
+
+		variation Variation
+			isDefault
+			relationship: 16b9f6fb-0312-4ba7-889e-ad4cabb11c77
+			defaultHierarchy: LocalDateTable_30e67364-88b6-4865-a0ac-751453013f05.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	partition gold_insights = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database("ycaavbff4s7epcq5p3h2mhudtq-4tdfsl23hsxupfaenrryenlwyu.datawarehouse.fabric.microsoft.com", "LH_FY26INSAdventureWorks"),
+				    gold_gold_insights = Source{[Schema="gold",Item="gold_insights"]}[Data],
+				    #"Changed Type" = Table.TransformColumnTypes(gold_gold_insights,{{"SUM_INSURED", Currency.Type}, {"premium", Currency.Type}, {"DEDUCTABLE", Currency.Type}})
+				in
+				    #"Changed Type"
+
+	changedProperty = IsHidden
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

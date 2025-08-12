@@ -1,0 +1,249 @@
+table measures_table
+	lineageTag: ebfd391b-8305-4e6f-8376-2df84e91530c
+
+	measure 'Total Claims' = DISTINCTCOUNT(fact_claims[claim_no])
+		formatString: 0
+		displayFolder: Volume
+		lineageTag: 17a44706-7602-416b-a81f-204de777f090
+
+	measure 'Total Claim Amount' = SUM(fact_claims[claim_amount_total])
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: Financial
+		lineageTag: 865c12bc-9592-45ea-a728-5f4911f4e481
+
+	measure 'Vehicle Claim Amount' = SUM(fact_claims[claim_amount_vehicle])
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: Financial
+		lineageTag: cf4cb0d4-ea74-4e92-8470-2506677b9f6e
+
+	measure 'Exposure (Sum Insured)' = SUM(fact_claims[sum_insured])
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: Financial
+		lineageTag: f9924b6e-48c5-435d-beb5-fc4f00729558
+
+	measure 'Injury Claim Amount' = SUM(fact_claims[claim_amount_injury])
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: Financial
+		lineageTag: 56dc0492-05b8-4f8b-a600-5b1214586201
+
+	measure 'Property Claim Amount' = SUM(fact_claims[claim_amount_property])
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: Financial
+		lineageTag: 6bf1fbb8-5899-462d-9151-7dc29108d0e8
+
+	measure 'Total Policies' = DISTINCTCOUNT(fact_claims[policy_no])
+		formatString: 0
+		displayFolder: Volume
+		lineageTag: 42437458-d5a2-47f4-b99f-8f87c80b2b73
+
+	measure 'Total Vehicles' = DISTINCTCOUNT(fact_claims[chassis_no])
+		formatString: 0
+		displayFolder: Volume
+		lineageTag: 8af6c0ad-0170-4628-9270-28ca35e43fda
+
+	measure 'Processing Review Claims' = CALCULATE([Total Claims], fact_claims[processing_flag] = "REVIEW_REQUIRED")
+		formatString: 0
+		displayFolder: Processing
+		lineageTag: 83b6dc90-28a2-46c4-8c0d-a156afd72f8f
+
+	measure 'Avg Claim Amount' = DIVIDE([Total Claim Amount], [Total Claims])
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: Financial
+		lineageTag: f40b8332-52de-4c7a-a8be-a18445b71e9a
+
+	measure 'Average Severity' = AVERAGE(fact_claims[severity])
+		displayFolder: Severity
+		lineageTag: f8fb1380-ab24-4da4-8ffa-183909890798
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'High Severity Claims' = CALCULATE([Total Claims], fact_claims[severity_category] IN {"High","Medium-High"})
+		formatString: 0
+		displayFolder: Severity
+		lineageTag: d5afe09b-6c83-4215-9e31-cbe2addf53bf
+
+	measure 'High Severity %' = DIVIDE([High Severity Claims],[Total Claims])
+		displayFolder: Severity
+		lineageTag: 959adec3-4124-4ecc-b85c-7b3422aaa77b
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Risk Weighted Amount' = SUMX(fact_claims, fact_claims[claim_amount_total] * fact_claims[severity])
+		displayFolder: Premium and Ratios
+		lineageTag: be62986c-4e4c-4318-89b9-b4d6d0bb33db
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Processing Review %' = DIVIDE([Processing Review Claims],[Total Claims])
+		displayFolder: Processing
+		lineageTag: c7993cb5-999a-4a5c-aeb0-f49eec3a4ce7
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Total Loss Candidates' = CALCULATE([Total Claims], fact_claims[processing_flag] = "TOTAL_LOSS_CANDIDATE")
+		formatString: 0
+		displayFolder: Processing
+		lineageTag: b11e4cc1-ff27-4c20-8d11-1dcdb6866ead
+
+	measure 'Average Telematics Speed' = AVERAGE(fact_telematics[telematics_speed])
+		displayFolder: Telematics
+		lineageTag: 19e246e2-20fb-4533-aacf-b2510376c80b
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'High Speed Risk Claims' = CALCULATE([Total Claims], fact_telematics[speed_risk_indicator] IN {"HIGH_SPEED_SEVERE","MODERATE_SPEED_RISK"})
+		formatString: 0
+		displayFolder: Telematics
+		lineageTag: 47c7a16e-695a-42bc-b1be-c8754f5fd399
+
+	measure 'High Speed Risk %' = DIVIDE([High Speed Risk Claims],[Total Claims])
+		displayFolder: Telematics
+		lineageTag: 54b0f619-4f3f-46c9-9eb5-8ec4beb82208
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Valid Policy Claims' = CALCULATE([Total Claims], fact_rules[valid_date] = "VALID")
+		formatString: 0
+		displayFolder: Rules
+		lineageTag: 508519cb-842a-406f-824c-a30a38dc3d52
+
+	measure 'Valid Policy %' = DIVIDE([Valid Policy Claims],([Valid Amount Claims] + [Not Valid Policy Claims]))
+		formatString: 0%;-0%;0%
+		displayFolder: Rules
+		lineageTag: cd1a1d46-b871-4f90-a073-3a9c45e1789b
+
+	measure 'Valid Amount Claims' = CALCULATE([Total Claims], fact_rules[valid_amount] = "claim value in the range of premium")
+		formatString: 0
+		displayFolder: Rules
+		lineageTag: 6c4bda1f-c0d0-489a-81f5-84f74a1982d8
+
+	measure 'Valid Amount %' = DIVIDE([Valid Amount Claims],([Not Valid Amount Claims]+[Valid Amount Claims]))
+		formatString: 0%;-0%;0%
+		displayFolder: Rules
+		lineageTag: 66997129-c6df-40c2-bd49-d1ecd5ae2a2a
+
+	measure 'Premium Amount' = SUM(dim_policy[premium])
+		displayFolder: Premium and Ratios
+		lineageTag: a5206102-a8c2-4cd9-9068-37ed0b3ff514
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Loss Ratio' = DIVIDE([Total Claim Amount], [Premium Amount])
+		displayFolder: Premium and Ratios
+		lineageTag: d765839a-7879-47ec-9844-75b43dd60e31
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Claim Frequency' = DIVIDE([Total Claims],[Total Policies])
+		displayFolder: Premium and Ratios
+		lineageTag: 76c251e1-3116-44f7-beb7-bfe6821f3b49
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Avg Accident-Event Distance (Miles)' = AVERAGE(fact_telematics[accident_telematics_distance_miles])
+		displayFolder: Premium and Ratios
+		lineageTag: 194185ec-990d-4751-a89e-f2ee0103cc71
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Total Claim Amount PY' = CALCULATE([Total Claim Amount], DATEADD(dim_date[date_key], -1, YEAR))
+		formatString: 0
+		displayFolder: Time Intelligence
+		lineageTag: f4aca2d4-8ae2-422e-8093-6d62f5dc2fdc
+
+	measure 'YoY Claim Amount %' =
+			
+			VAR Curr = [Total Claim Amount]
+			VAR Prev = [Total Claim Amount PY]
+			RETURN DIVIDE(Curr - Prev, Prev)
+		displayFolder: Time Intelligence
+		lineageTag: 3738e132-64f6-49cd-be89-e6738a8e897d
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Orphan Claim FK Count' = ```
+			
+			VAR v = CALCULATE( MAX ( constraint_audit[value] ), 
+			                  constraint_audit[entity] = "fact_claims", 
+			                  constraint_audit[metric] = "orphan_fk_claim_no_to_dim_claim" )
+			RETURN VALUE(v)
+			```
+		displayFolder: Data Quality
+		lineageTag: 94e155a3-bb2e-4aeb-a7bc-029afd2f83fe
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Duplicate dim_claim PK Rows' =
+			
+			VAR v = CALCULATE(MAX(constraint_audit[value]), constraint_audit[entity]="dim_claim", constraint_audit[metric]="duplicate_pk_rows")
+			RETURN VALUE(v)
+		displayFolder: Data Quality
+		lineageTag: c3945b8f-9b2c-4c5c-8b81-5f5b60dc8d74
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Data Quality OK' =
+			
+			IF( [Orphan Claim FK Count] = 0 && [Duplicate dim_claim PK Rows] = 0, "OK", "ISSUES" )
+		displayFolder: Data Quality
+		lineageTag: 30a420b9-1bbe-48c8-b1d1-444e596da965
+
+	measure 'Distinct Risk Profiles' = DISTINCTCOUNT(dim_risk[risk_key])
+		formatString: 0
+		displayFolder: Risk
+		lineageTag: c5c50ebd-4857-4319-b639-dcb00d7d96a8
+
+	measure 'Distinct Locations' = DISTINCTCOUNT(fact_claims[location_id])
+		formatString: 0
+		displayFolder: Volume
+		lineageTag: a15c6acd-7da7-4100-a704-cd41e4e1ea29
+
+	measure 'Claims per Location' = DIVIDE([Total Claims], DISTINCTCOUNT(fact_claims[location_id]))
+		displayFolder: Location
+		lineageTag: 5f054f22-b876-4e5b-9c85-8d75998dbbad
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Orphan Location FK Count' =
+			
+			VAR v = CALCULATE(MAX(constraint_audit[value]), constraint_audit[entity]="fact_claims", constraint_audit[metric]="orphan_fk_location_id_to_dim_location")
+			RETURN VALUE(v)
+		displayFolder: Data Quality
+		lineageTag: 34ef5a33-77c6-4ed8-86f7-a09137ef8c76
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Not Valid Policy Claims' = CALCULATE([Total Claims], fact_rules[valid_date] = "NOT VALID")
+		formatString: 0
+		displayFolder: Rules
+		lineageTag: c00f9277-ca0a-4f05-aefe-76d8856e5a57
+
+	measure 'Not Valid Amount Claims' = CALCULATE([Total Claims], fact_rules[valid_amount] = "claim value more than premium")
+		formatString: 0
+		displayFolder: Rules
+		lineageTag: 0a218f75-0fcc-4873-80f2-ec506d6002d6
+
+	column Measures
+		dataType: string
+		isHidden
+		lineageTag: e299fae9-cf39-4ccf-a94b-ade411d14e7c
+		summarizeBy: none
+		sourceColumn: Measures
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	partition measures_table = m
+		mode: import
+		source =
+				let
+				    Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("i44FAA==", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [Measures = _t]),
+				    #"Changed Type" = Table.TransformColumnTypes(Source,{{"Measures", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

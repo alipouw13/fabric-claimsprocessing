@@ -1,0 +1,51 @@
+table constraint_audit
+	lineageTag: e41fe8fc-f220-4610-a694-5b3dcab53c92
+
+	column entity
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 5819ebb6-81f4-4143-a8ff-b1381a0a15f7
+		summarizeBy: none
+		sourceColumn: entity
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column metric
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 89dfc404-e6bf-46b0-9a05-486605deeb0f
+		summarizeBy: none
+		sourceColumn: metric
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column value
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 58b57503-00a6-40f5-946a-d24e05f514ff
+		summarizeBy: none
+		sourceColumn: value
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	partition constraint_audit = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database("ycaavbff4s7epcq5p3h2mhudtq-4tdfsl23hsxupfaenrryenlwyu.datawarehouse.fabric.microsoft.com", "LH_FY26INSAdventureWorks"),
+				    gold_constraint_audit = Source{[Schema="gold",Item="constraint_audit"]}[Data]
+				in
+				    gold_constraint_audit
+
+	changedProperty = IsHidden
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,115 @@
+table dim_policy
+	lineageTag: afbd9c4f-22af-4bec-9dd8-ff3c3418dc94
+
+	column policy_no
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 30408784-60c3-43fb-8a5f-ba25425aee48
+		summarizeBy: none
+		sourceColumn: policy_no
+
+		annotation SummarizationSetBy = Automatic
+
+	column customer_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: a26bb146-39a4-4f4a-acfb-b506f1de299c
+		summarizeBy: none
+		sourceColumn: customer_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column driver_age
+		dataType: double
+		sourceProviderType: float
+		lineageTag: bf4cae8c-cf10-47de-ae64-e0d09d590492
+		summarizeBy: sum
+		sourceColumn: driver_age
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column pol_issue_date
+		dataType: dateTime
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: 3b9517e2-aba7-48af-9606-d248f82ecf34
+		summarizeBy: none
+		sourceColumn: pol_issue_date
+
+		variation Variation
+			isDefault
+			relationship: 881fd58d-7f61-4988-9dad-ecb5dd3702c1
+			defaultHierarchy: LocalDateTable_ededce19-8b7c-4f36-ad1e-1a28588eec28.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column pol_expiry_date
+		dataType: dateTime
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: bcf85803-3ccf-4ec4-8df8-9a6433e4c16f
+		summarizeBy: none
+		sourceColumn: pol_expiry_date
+
+		variation Variation
+			isDefault
+			relationship: 9b94deb7-8089-4895-8901-695bb710b243
+			defaultHierarchy: LocalDateTable_0b0ec4f8-830f-4083-a1c8-7ec1a1585467.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column premium
+		dataType: double
+		sourceProviderType: float
+		lineageTag: 391dfaed-954f-4bb9-ad12-3d0d8a52d279
+		summarizeBy: sum
+		sourceColumn: premium
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column sum_insured
+		dataType: double
+		sourceProviderType: float
+		lineageTag: ecad9197-a7b7-4e0a-a9e0-dd228d2598be
+		summarizeBy: sum
+		sourceColumn: sum_insured
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column 'Driver Age Bucket' =
+			
+			SWITCH(TRUE(),
+			  dim_policy[driver_age] < 25, "<25",
+			  dim_policy[driver_age] < 35, "25-34",
+			  dim_policy[driver_age] < 50, "35-49",
+			  dim_policy[driver_age] < 65, "50-64",
+			  "65+"
+			)
+		lineageTag: b7d4a82c-7abd-4d4c-9e9c-c0de82ac6e36
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_policy = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database("ycaavbff4s7epcq5p3h2mhudtq-4tdfsl23hsxupfaenrryenlwyu.datawarehouse.fabric.microsoft.com", "LH_FY26INSAdventureWorks"),
+				    gold_dim_policy = Source{[Schema="gold",Item="dim_policy"]}[Data]
+				in
+				    gold_dim_policy
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

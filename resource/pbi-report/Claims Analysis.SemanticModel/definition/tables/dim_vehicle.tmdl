@@ -1,0 +1,54 @@
+table dim_vehicle
+	lineageTag: 99b034e9-9792-492e-81ce-0df4fe0b5ed0
+
+	column chassis_no
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 41623cff-21ad-4ac7-bd2f-9d2a48dcdf1b
+		summarizeBy: none
+		sourceColumn: chassis_no
+
+		annotation SummarizationSetBy = Automatic
+
+	column make
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 05c97efa-c37e-46fc-b158-4d0d3cbdf5f7
+		summarizeBy: none
+		sourceColumn: make
+
+		annotation SummarizationSetBy = Automatic
+
+	column model
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 837a5b57-0d11-4f3d-b706-09f16435cce2
+		summarizeBy: none
+		sourceColumn: model
+
+		annotation SummarizationSetBy = Automatic
+
+	column model_year
+		dataType: double
+		sourceProviderType: float
+		lineageTag: ac20ad18-95fe-4ca3-893d-618d32002a2b
+		summarizeBy: sum
+		sourceColumn: model_year
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition dim_vehicle = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database("ycaavbff4s7epcq5p3h2mhudtq-4tdfsl23hsxupfaenrryenlwyu.datawarehouse.fabric.microsoft.com", "LH_FY26INSAdventureWorks"),
+				    gold_dim_vehicle = Source{[Schema="gold",Item="dim_vehicle"]}[Data]
+				in
+				    gold_dim_vehicle
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

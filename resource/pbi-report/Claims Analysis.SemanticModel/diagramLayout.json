@@ -1,0 +1,237 @@
+{
+  "version": "1.1.0",
+  "diagrams": [
+    {
+      "ordinal": 0,
+      "scrollPosition": {
+        "x": 0,
+        "y": 0
+      },
+      "nodes": [
+        {
+          "location": {
+            "x": 1596,
+            "y": 176
+          },
+          "nodeIndex": "measures_table",
+          "nodeLineageTag": "ebfd391b-8305-4e6f-8376-2df84e91530c",
+          "size": {
+            "height": 72,
+            "width": 234
+          },
+          "zIndex": 1,
+          "expandedHeight": 104
+        },
+        {
+          "location": {
+            "x": 1592,
+            "y": 376
+          },
+          "nodeIndex": "v_smart_claims_dashboard",
+          "nodeLineageTag": "665a2f75-d739-4457-91d0-7a0aba0c0565",
+          "size": {
+            "height": 72,
+            "width": 234
+          },
+          "zIndex": 0,
+          "expandedHeight": 300
+        },
+        {
+          "location": {
+            "x": 1591,
+            "y": 88
+          },
+          "nodeIndex": "v_claims_summary_by_risk",
+          "nodeLineageTag": "1e945dd9-e240-488d-bc39-467167a27e93",
+          "size": {
+            "height": 72,
+            "width": 234
+          },
+          "zIndex": 0,
+          "expandedHeight": 248
+        },
+        {
+          "location": {
+            "x": 839,
+            "y": 0
+          },
+          "nodeIndex": "dim_claim",
+          "nodeLineageTag": "ea608791-e071-449b-a4e6-d60a21325f06",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 31,
+            "y": 71
+          },
+          "nodeIndex": "dim_date",
+          "nodeLineageTag": "17e1cf20-d2ae-4e46-b84a-22c84a398d77",
+          "size": {
+            "height": 104,
+            "width": 234
+          },
+          "zIndex": 0,
+          "expandedHeight": 296
+        },
+        {
+          "location": {
+            "x": 372,
+            "y": 9
+          },
+          "nodeIndex": "dim_location",
+          "nodeLineageTag": "a50ea250-b90d-42b6-ab5f-6825fb3f55b8",
+          "size": {
+            "height": 200,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 413,
+            "y": 820
+          },
+          "nodeIndex": "dim_policy",
+          "nodeLineageTag": "afbd9c4f-22af-4bec-9dd8-ff3c3418dc94",
+          "size": {
+            "height": 248,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1063,
+            "y": 859
+          },
+          "nodeIndex": "dim_risk",
+          "nodeLineageTag": "f539282f-90a4-47ea-9831-6b3ced13fada",
+          "size": {
+            "height": 176,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 710,
+            "y": 862
+          },
+          "nodeIndex": "dim_vehicle",
+          "nodeLineageTag": "99b034e9-9792-492e-81ce-0df4fe0b5ed0",
+          "size": {
+            "height": 176,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 853,
+            "y": 428
+          },
+          "nodeIndex": "fact_accident_severity",
+          "nodeLineageTag": "1393243a-4346-4fe6-bdd1-1a46144d3b96",
+          "size": {
+            "height": 272,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 189,
+            "y": 418
+          },
+          "nodeIndex": "fact_claims",
+          "nodeLineageTag": "f9ed7b5f-ff05-45ab-bdb5-b132d214a1ab",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 526,
+            "y": 441
+          },
+          "nodeIndex": "fact_rules",
+          "nodeLineageTag": "96bd20f9-2e31-4460-a534-e08dc9ca6695",
+          "size": {
+            "height": 224,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1605,
+            "y": 479
+          },
+          "nodeIndex": "fact_smart_claims",
+          "nodeLineageTag": "74d023e5-b1a5-4b37-95ab-df6f3fec1b4c",
+          "size": {
+            "height": 176,
+            "width": 234
+          },
+          "zIndex": 0,
+          "expandedHeight": 300
+        },
+        {
+          "location": {
+            "x": 1179,
+            "y": 424
+          },
+          "nodeIndex": "fact_telematics",
+          "nodeLineageTag": "c120db5f-f3f5-4e19-98c3-e8fb8d02b0ca",
+          "size": {
+            "height": 272,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1601,
+            "y": 269
+          },
+          "nodeIndex": "gold_insights",
+          "nodeLineageTag": "8ba3ca0c-b253-457c-b0de-ce3e36084a38",
+          "size": {
+            "height": 72,
+            "width": 234
+          },
+          "zIndex": 0,
+          "expandedHeight": 300
+        },
+        {
+          "location": {
+            "x": 1597,
+            "y": 0
+          },
+          "nodeIndex": "constraint_audit",
+          "nodeLineageTag": "e41fe8fc-f220-4610-a694-5b3dcab53c92",
+          "size": {
+            "height": 72,
+            "width": 234
+          },
+          "zIndex": 0,
+          "expandedHeight": 152
+        }
+      ],
+      "name": "All tables",
+      "zoomValue": 60,
+      "pinKeyFieldsToTop": false,
+      "showExtraHeaderInfo": false,
+      "hideKeyFieldsWhenCollapsed": false,
+      "tablesLocked": false
+    }
+  ],
+  "selectedDiagram": "All tables",
+  "defaultDiagram": "All tables"
+}

@@ -1,0 +1,206 @@
+table fact_claims
+	lineageTag: f9ed7b5f-ff05-45ab-bdb5-b132d214a1ab
+
+	column claim_no
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 81b79ffc-3a2e-4c02-ab2c-f7befdf0c8f8
+		summarizeBy: none
+		sourceColumn: claim_no
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column policy_no
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 06308b9b-d3ca-408e-9bb1-db851da0bb9d
+		summarizeBy: none
+		sourceColumn: policy_no
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column chassis_no
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 8a2707f4-cadd-4898-b3aa-b72c353e99cf
+		summarizeBy: none
+		sourceColumn: chassis_no
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column claim_date
+		dataType: dateTime
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: 60eaeaf6-239e-457d-a24d-3e73e7f943e0
+		summarizeBy: none
+		sourceColumn: claim_date
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column claim_amount_total
+		dataType: decimal
+		formatString: 0
+		lineageTag: 324417b9-76d2-45b7-a884-1b8aac1d80da
+		summarizeBy: sum
+		sourceColumn: claim_amount_total
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column claim_amount_vehicle
+		dataType: decimal
+		formatString: 0
+		lineageTag: a59b2627-b5b4-4c45-a004-b79cee85df7c
+		summarizeBy: sum
+		sourceColumn: claim_amount_vehicle
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column claim_amount_injury
+		dataType: decimal
+		formatString: 0
+		lineageTag: fe127291-8bab-4d63-9131-2e5b95c0614d
+		summarizeBy: sum
+		sourceColumn: claim_amount_injury
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column claim_amount_property
+		dataType: decimal
+		formatString: 0
+		lineageTag: a9634ed4-eb52-423a-8a21-c9ced56e50cb
+		summarizeBy: sum
+		sourceColumn: claim_amount_property
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column premium
+		dataType: decimal
+		lineageTag: 07bf241a-a3a4-4a23-a479-ebf16bc8a523
+		summarizeBy: sum
+		sourceColumn: premium
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column sum_insured
+		dataType: decimal
+		lineageTag: aad0dc93-ad16-4340-a291-93f3187a1c85
+		summarizeBy: sum
+		sourceColumn: sum_insured
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column severity
+		dataType: double
+		sourceProviderType: float
+		lineageTag: 8647f444-b9b1-4745-bc68-c718f847dfae
+		summarizeBy: sum
+		sourceColumn: severity
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column severity_category
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: c6ccbee8-db3b-42f1-8520-f605224de276
+		summarizeBy: none
+		sourceColumn: severity_category
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_category
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 3b692365-039b-4a09-b2e7-1696daa54ff5
+		summarizeBy: none
+		sourceColumn: risk_category
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column processing_flag
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 1d30a332-69a0-4e2f-aeab-a66e8482aa77
+		summarizeBy: none
+		sourceColumn: processing_flag
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_id
+		dataType: string
+		lineageTag: b2c958f1-9390-4344-8c61-59d5b8a00f77
+		summarizeBy: none
+		sourceColumn: location_id
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column speed_risk_indicator
+		dataType: string
+		lineageTag: e063fbcc-db8c-4ae1-b5ea-1cdf4d21207e
+		summarizeBy: none
+		sourceColumn: speed_risk_indicator
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_key
+		dataType: string
+		lineageTag: 9f7b4364-60fc-450c-a6bc-7dca73fa8598
+		summarizeBy: none
+		sourceColumn: risk_key
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_claims = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database("ycaavbff4s7epcq5p3h2mhudtq-4tdfsl23hsxupfaenrryenlwyu.datawarehouse.fabric.microsoft.com", "LH_FY26INSAdventureWorks"),
+				    gold_fact_claims = Source{[Schema="gold",Item="fact_claims"]}[Data],
+				    #"Changed Type" = Table.TransformColumnTypes(gold_fact_claims,{{"claim_amount_total", Currency.Type}, {"claim_amount_vehicle", Currency.Type}, {"claim_amount_injury", Currency.Type}, {"claim_amount_property", Currency.Type}, {"premium", Currency.Type}, {"sum_insured", Currency.Type}})
+				in
+				    #"Changed Type"
+
+	changedProperty = IsHidden
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

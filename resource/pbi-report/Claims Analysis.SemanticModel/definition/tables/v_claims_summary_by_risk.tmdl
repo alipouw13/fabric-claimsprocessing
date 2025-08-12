@@ -1,0 +1,111 @@
+table v_claims_summary_by_risk
+	isHidden
+	lineageTag: 1e945dd9-e240-488d-bc39-467167a27e93
+
+	column risk_category
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: d400ef1a-4353-48cd-a6fb-e7bebc6eb945
+		summarizeBy: none
+		sourceColumn: risk_category
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column processing_flag
+		dataType: string
+		isHidden
+		sourceProviderType: varchar(8000)
+		lineageTag: 91fd33a9-fcf4-4292-bc0b-2ff973cc6004
+		summarizeBy: none
+		sourceColumn: processing_flag
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column claim_count
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: ce64ed06-1921-4702-8c49-46a49000b76c
+		summarizeBy: sum
+		sourceColumn: claim_count
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column avg_claim_amount
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: 10ed636e-eb99-4d64-8de3-c2f49f95dc35
+		summarizeBy: sum
+		sourceColumn: avg_claim_amount
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column avg_severity
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: 5879df03-99fb-4848-8de7-c70773041872
+		summarizeBy: sum
+		sourceColumn: avg_severity
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column avg_speed
+		dataType: double
+		isHidden
+		sourceProviderType: float
+		lineageTag: 9ba7b048-ba43-4dee-8d62-48d2203f75cb
+		summarizeBy: sum
+		sourceColumn: avg_speed
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column total_exposure
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: c385608d-45df-484d-aef4-35a2e4e2a3bc
+		summarizeBy: sum
+		sourceColumn: total_exposure
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	partition v_claims_summary_by_risk = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database("ycaavbff4s7epcq5p3h2mhudtq-4tdfsl23hsxupfaenrryenlwyu.datawarehouse.fabric.microsoft.com", "LH_FY26INSAdventureWorks"),
+				    gold_v_claims_summary_by_risk = Source{[Schema="gold",Item="v_claims_summary_by_risk"]}[Data]
+				in
+				    gold_v_claims_summary_by_risk
+
+	changedProperty = IsHidden
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

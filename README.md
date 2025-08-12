@@ -57,7 +57,8 @@ root/
     data_sources/                             Synthetic raw datasets (policies, claims, telematics, images)
     guides/                                   Guides for Fabric deployment, Power BI, AI Foundry integration
     images/                                   Visualization assets
-  FABRIC_PIPELINE_CONFIG.py               Pipeline config to run the notebooks
+    pbi-report/                                Power BI Direct Lake report project (.pbip)
+  FABRIC_PIPELINE_CONFIG.py                   Pipeline config to run the notebooks
   README.md                                   (this file)
 ```
 
@@ -112,6 +113,8 @@ Recommended Power BI model:
 Two consumption patterns:
 - Direct Lake on Gold tables/views (recommended)
 - Fabric SQL DB replication (optional) for enterprise semantics/RLS/API reuse
+
+Note: A ready-to-open Power BI project is provided under `pbi-report/` (.pbip). Open it in Power BI Desktop to load the Direct Lake model and report.
 
 Power BI Dataset Modeling Steps:
 1. Connect to Lakehouse (Direct Lake) and select Gold tables/views.

@@ -392,4 +392,11 @@ try:
     for col_name in telematics_table.columns:
         if col_name not in ["telematics_id", "ingestion_timestamp", "ingestion_date", "source_file"]:
             null_count = telematics_table.filter(F.col(col_name).isNull()).count()
-            null_percentage = (null_count / total_records) * 100 if total_records > 0
+            null_percentage = (null_count / total_records) * 100 if total_records > 0 else 0
+
+    print(f"  {col_name}: {null_count:,} nulls ({null_percentage:.1f}%)")
+
+except Exception as e:
+    logger.error(f"Error in data quality monitoring: {str(e)}")
+
+print("\n Data quality monitoring setup completed")

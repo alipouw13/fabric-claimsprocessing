@@ -50,7 +50,7 @@ table fact_claims
 
 	column claim_amount_total
 		dataType: decimal
-		formatString: 0
+		formatString: \$#,0.###############;(\$#,0.###############);\$#,0.###############
 		lineageTag: 324417b9-76d2-45b7-a884-1b8aac1d80da
 		summarizeBy: sum
 		sourceColumn: claim_amount_total
@@ -61,7 +61,7 @@ table fact_claims
 
 	column claim_amount_vehicle
 		dataType: decimal
-		formatString: 0
+		formatString: \$#,0.###############;(\$#,0.###############);\$#,0.###############
 		lineageTag: a59b2627-b5b4-4c45-a004-b79cee85df7c
 		summarizeBy: sum
 		sourceColumn: claim_amount_vehicle
@@ -72,7 +72,7 @@ table fact_claims
 
 	column claim_amount_injury
 		dataType: decimal
-		formatString: 0
+		formatString: \$#,0.###############;(\$#,0.###############);\$#,0.###############
 		lineageTag: fe127291-8bab-4d63-9131-2e5b95c0614d
 		summarizeBy: sum
 		sourceColumn: claim_amount_injury
@@ -83,7 +83,7 @@ table fact_claims
 
 	column claim_amount_property
 		dataType: decimal
-		formatString: 0
+		formatString: \$#,0.###############;(\$#,0.###############);\$#,0.###############
 		lineageTag: a9634ed4-eb52-423a-8a21-c9ced56e50cb
 		summarizeBy: sum
 		sourceColumn: claim_amount_property
@@ -94,6 +94,7 @@ table fact_claims
 
 	column premium
 		dataType: decimal
+		formatString: \$#,0.###############;(\$#,0.###############);\$#,0.###############
 		lineageTag: 07bf241a-a3a4-4a23-a479-ebf16bc8a523
 		summarizeBy: sum
 		sourceColumn: premium
@@ -102,10 +103,9 @@ table fact_claims
 
 		annotation SummarizationSetBy = Automatic
 
-		annotation PBI_FormatHint = {"isGeneralNumber":true}
-
 	column sum_insured
 		dataType: decimal
+		formatString: \$#,0.###############;(\$#,0.###############);\$#,0.###############
 		lineageTag: aad0dc93-ad16-4340-a291-93f3187a1c85
 		summarizeBy: sum
 		sourceColumn: sum_insured
@@ -113,8 +113,6 @@ table fact_claims
 		changedProperty = IsHidden
 
 		annotation SummarizationSetBy = Automatic
-
-		annotation PBI_FormatHint = {"isGeneralNumber":true}
 
 	column severity
 		dataType: double

@@ -51,6 +51,9 @@ table dim_date
 		lineageTag: 5bd30a93-60fc-4e83-bc9e-c2469acea112
 		summarizeBy: none
 		sourceColumn: month_short
+		sortByColumn: month
+
+		changedProperty = SortByColumn
 
 		annotation SummarizationSetBy = Automatic
 

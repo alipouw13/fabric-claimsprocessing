@@ -63,10 +63,9 @@ table measures_table
 		lineageTag: d5afe09b-6c83-4215-9e31-cbe2addf53bf
 
 	measure 'High Severity %' = DIVIDE([High Severity Claims],[Total Claims])
+		formatString: 0.00%;-0.00%;0.00%
 		displayFolder: Severity
 		lineageTag: 959adec3-4124-4ecc-b85c-7b3422aaa77b
-
-		annotation PBI_FormatHint = {"isGeneralNumber":true}
 
 	measure 'Risk Weighted Amount' = SUMX(fact_claims, fact_claims[claim_amount_total] * fact_claims[severity])
 		displayFolder: Premium and Ratios

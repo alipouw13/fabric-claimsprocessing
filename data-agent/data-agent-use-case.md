@@ -117,17 +117,17 @@ WHERE processing_flag = 'REVIEW_REQUIRED'
 
 ### B. Risk Assessment Questions
 
-#### Question 3: "What is the loss ratio by driver age group?"
+#### Question 3: "What is the loss ratio by driver age?"
 ```sql
 SELECT 
-    dp.[Driver Age Bucket],
+    dp.[driver_age],
     SUM(fc.claim_amount_total) as total_claims,
     SUM(dp.premium) as total_premiums,
     SUM(fc.claim_amount_total) / SUM(dp.premium) as loss_ratio,
     COUNT(DISTINCT fc.claim_no) as claim_count
 FROM gold.fact_claims fc
 JOIN gold.dim_policy dp ON fc.policy_no = dp.policy_no
-GROUP BY dp.[Driver Age Bucket]
+GROUP BY dp.[driver_age]
 ORDER BY loss_ratio DESC
 ```
 
@@ -154,15 +154,15 @@ ORDER BY high_severity_percentage DESC, total_claims DESC
 ```sql
 SELECT 
     dd.year,
-    dd.month_name,
+    dd.month_short,
     COUNT(DISTINCT fc.claim_no) as total_claims,
     SUM(fc.claim_amount_total) as total_claim_amount,
     AVG(fc.claim_amount_total) as avg_claim_amount
 FROM gold.fact_claims fc
 JOIN gold.dim_date dd ON fc.claim_date = dd.date_key
 WHERE dd.year IN (YEAR(GETDATE()), YEAR(GETDATE())-1)
-GROUP BY dd.year, dd.month_name, dd.month_of_year
-ORDER BY dd.year, dd.month_of_year
+GROUP BY dd.year, dd.month_short, dd.month
+ORDER BY dd.year, dd.month
 ```
 
 #### Question 6: "What vehicle makes have the highest claim frequency and amounts?"

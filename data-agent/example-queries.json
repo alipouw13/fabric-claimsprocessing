@@ -1,0 +1,95 @@
+{
+  "example_queries": [
+    {
+      "question": "What are the top 10 highest claim amounts this year and what are their details?",
+      "sql_query": "SELECT TOP 10 \n    fc.claim_no,\n    fc.claim_amount_total,\n    fc.claim_date,\n    fc.severity_category,\n    fc.processing_flag,\n    dp.customer_id,\n    dv.make,\n    dv.model,\n    dl.neighborhood,\n    dl.zip_code\nFROM gold.fact_claims fc\nJOIN gold.dim_policy dp ON fc.policy_no = dp.policy_no\nJOIN gold.dim_vehicle dv ON fc.chassis_no = dv.chassis_no  \nJOIN gold.dim_location dl ON fc.location_id = dl.location_id\nWHERE YEAR(fc.claim_date) = YEAR(GETDATE())\nORDER BY fc.claim_amount_total DESC",
+      "category": "Claims Operations"
+    },
+    {
+      "question": "How many claims need manual review and what's the average claim amount for review cases?",
+      "sql_query": "SELECT \n    COUNT(*) as claims_requiring_review,\n    AVG(claim_amount_total) as avg_review_claim_amount,\n    SUM(claim_amount_total) as total_review_amount\nFROM gold.fact_claims \nWHERE processing_flag = 'REVIEW_REQUIRED'",
+      "category": "Claims Operations"
+    },
+    {
+      "question": "What is the loss ratio by driver age group?",
+      "sql_query": "SELECT \n    dp.[Driver Age Bucket],\n    SUM(fc.claim_amount_total) as total_claims,\n    SUM(dp.premium) as total_premiums,\n    SUM(fc.claim_amount_total) / SUM(dp.premium) as loss_ratio,\n    COUNT(DISTINCT fc.claim_no) as claim_count\nFROM gold.fact_claims fc\nJOIN gold.dim_policy dp ON fc.policy_no = dp.policy_no\nGROUP BY dp.[Driver Age Bucket]\nORDER BY loss_ratio DESC",
+      "category": "Risk Assessment"
+    },
+    {
+      "question": "Which locations have the highest concentration of high-severity claims?",
+      "sql_query": "SELECT \n    dl.neighborhood,\n    dl.borough,\n    dl.zip_code,\n    COUNT(*) as total_claims,\n    SUM(CASE WHEN fc.severity_category IN ('High', 'Medium-High') THEN 1 ELSE 0 END) as high_severity_claims,\n    (SUM(CASE WHEN fc.severity_category IN ('High', 'Medium-High') THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) as high_severity_percentage,\n    AVG(fc.claim_amount_total) as avg_claim_amount\nFROM gold.fact_claims fc\nJOIN gold.dim_location dl ON fc.location_id = dl.location_id\nGROUP BY dl.neighborhood, dl.borough, dl.zip_code\nHAVING COUNT(*) >= 10\nORDER BY high_severity_percentage DESC, total_claims DESC",
+      "category": "Risk Assessment"
+    },
+    {
+      "question": "What is our monthly claims trend and how does it compare to last year?",
+      "sql_query": "SELECT \n    dd.year,\n    dd.month_name,\n    COUNT(DISTINCT fc.claim_no) as total_claims,\n    SUM(fc.claim_amount_total) as total_claim_amount,\n    AVG(fc.claim_amount_total) as avg_claim_amount\nFROM gold.fact_claims fc\nJOIN gold.dim_date dd ON fc.claim_date = dd.date_key\nWHERE dd.year IN (YEAR(GETDATE()), YEAR(GETDATE())-1)\nGROUP BY dd.year, dd.month_name, dd.month_of_year\nORDER BY dd.year, dd.month_of_year",
+      "category": "Financial Performance"
+    },
+    {
+      "question": "What vehicle makes have the highest claim frequency and amounts?",
+      "sql_query": "SELECT \n    dv.make,\n    COUNT(DISTINCT fc.claim_no) as total_claims,\n    COUNT(DISTINCT fc.policy_no) as policies_with_claims,\n    SUM(fc.claim_amount_total) as total_claim_amount,\n    AVG(fc.claim_amount_total) as avg_claim_amount,\n    (COUNT(DISTINCT fc.claim_no) * 100.0 / COUNT(DISTINCT fc.policy_no)) as claim_frequency_pct\nFROM gold.fact_claims fc\nJOIN gold.dim_vehicle dv ON fc.chassis_no = dv.chassis_no\nGROUP BY dv.make\nHAVING COUNT(DISTINCT fc.claim_no) >= 20\nORDER BY total_claim_amount DESC",
+      "category": "Financial Performance"
+    },
+    {
+      "question": "How does telematics speed correlate with claim severity and amounts?",
+      "sql_query": "SELECT \n    ft.speed_risk_indicator,\n    COUNT(DISTINCT fc.claim_no) as total_claims,\n    AVG(ft.telematics_speed) as avg_speed,\n    AVG(fc.severity) as avg_severity_score,\n    SUM(fc.claim_amount_total) as total_claim_amount,\n    AVG(fc.claim_amount_total) as avg_claim_amount\nFROM gold.fact_claims fc\nJOIN gold.fact_telematics ft ON fc.claim_no = ft.claim_no\nGROUP BY ft.speed_risk_indicator\nORDER BY avg_claim_amount DESC",
+      "category": "Telematics & Risk Behavior"
+    },
+    {
+      "question": "What is the relationship between distance from accident location and claim amounts?",
+      "sql_query": "SELECT \n    CASE \n        WHEN ft.accident_telematics_distance_miles < 1 THEN 'Under 1 mile'\n        WHEN ft.accident_telematics_distance_miles < 5 THEN '1-5 miles'\n        WHEN ft.accident_telematics_distance_miles < 10 THEN '5-10 miles'\n        ELSE 'Over 10 miles'\n    END as distance_category,\n    COUNT(*) as claim_count,\n    AVG(fc.claim_amount_total) as avg_claim_amount,\n    AVG(ft.accident_telematics_distance_miles) as avg_distance_miles\nFROM gold.fact_claims fc\nJOIN gold.fact_telematics ft ON fc.claim_no = ft.claim_no\nWHERE ft.accident_telematics_distance_miles IS NOT NULL\nGROUP BY \n    CASE \n        WHEN ft.accident_telematics_distance_miles < 1 THEN 'Under 1 mile'\n        WHEN ft.accident_telematics_distance_miles < 5 THEN '1-5 miles'\n        WHEN ft.accident_telematics_distance_miles < 10 THEN '5-10 miles'\n        ELSE 'Over 10 miles'\n    END\nORDER BY avg_claim_amount DESC",
+      "category": "Telematics & Risk Behavior"
+    },
+    {
+      "question": "What patterns exist in claims flagged for suspicious activity?",
+      "sql_query": "SELECT \n    fc.processing_flag,\n    COUNT(*) as total_claims,\n    AVG(fc.claim_amount_total) as avg_claim_amount,\n    SUM(fc.claim_amount_total) as total_amount,\n    AVG(DATEDIFF(day, fc.claim_date, dp.pol_issue_date)) as avg_days_since_policy_start\nFROM gold.fact_claims fc\nJOIN gold.dim_policy dp ON fc.policy_no = dp.policy_no\nWHERE fc.processing_flag IN ('REVIEW_REQUIRED', 'TOTAL_LOSS_CANDIDATE')\nGROUP BY fc.processing_flag",
+      "category": "Fraud Detection"
+    },
+    {
+      "question": "What is our current data quality status and any issues to address?",
+      "sql_query": "SELECT \n    entity,\n    metric,\n    value,\n    CASE \n        WHEN metric LIKE '%orphan%' AND CAST(value AS INT) > 0 THEN 'ATTENTION REQUIRED'\n        WHEN metric LIKE '%duplicate%' AND CAST(value AS INT) > 0 THEN 'ATTENTION REQUIRED'\n        ELSE 'OK'\n    END as status\nFROM gold.constraint_audit\nORDER BY \n    CASE WHEN CAST(value AS INT) > 0 THEN 0 ELSE 1 END,\n    entity, metric",
+      "category": "Data Quality & Operations"
+    },
+    {
+      "question": "Show me claims with high severity by vehicle type and location",
+      "sql_query": "SELECT \n    dv.make,\n    dv.model,\n    dl.borough,\n    dl.neighborhood,\n    COUNT(*) as high_severity_claims,\n    AVG(fc.claim_amount_total) as avg_claim_amount,\n    SUM(fc.claim_amount_total) as total_claim_amount\nFROM gold.fact_claims fc\nJOIN gold.dim_vehicle dv ON fc.chassis_no = dv.chassis_no\nJOIN gold.dim_location dl ON fc.location_id = dl.location_id\nWHERE fc.severity_category IN ('High', 'Medium-High')\nGROUP BY dv.make, dv.model, dl.borough, dl.neighborhood\nHAVING COUNT(*) >= 5\nORDER BY total_claim_amount DESC",
+      "category": "Risk Assessment"
+    },
+    {
+      "question": "What is the claims frequency by customer age and vehicle age?",
+      "sql_query": "SELECT \n    dp.[Driver Age Bucket],\n    CASE \n        WHEN YEAR(GETDATE()) - dv.model_year <= 2 THEN 'New (0-2 years)'\n        WHEN YEAR(GETDATE()) - dv.model_year <= 5 THEN 'Recent (3-5 years)'\n        WHEN YEAR(GETDATE()) - dv.model_year <= 10 THEN 'Older (6-10 years)'\n        ELSE 'Very Old (10+ years)'\n    END as vehicle_age_group,\n    COUNT(DISTINCT fc.claim_no) as total_claims,\n    COUNT(DISTINCT fc.policy_no) as total_policies,\n    (COUNT(DISTINCT fc.claim_no) * 100.0 / COUNT(DISTINCT fc.policy_no)) as claim_frequency_pct,\n    AVG(fc.claim_amount_total) as avg_claim_amount\nFROM gold.fact_claims fc\nJOIN gold.dim_policy dp ON fc.policy_no = dp.policy_no\nJOIN gold.dim_vehicle dv ON fc.chassis_no = dv.chassis_no\nGROUP BY dp.[Driver Age Bucket], \n    CASE \n        WHEN YEAR(GETDATE()) - dv.model_year <= 2 THEN 'New (0-2 years)'\n        WHEN YEAR(GETDATE()) - dv.model_year <= 5 THEN 'Recent (3-5 years)'\n        WHEN YEAR(GETDATE()) - dv.model_year <= 10 THEN 'Older (6-10 years)'\n        ELSE 'Very Old (10+ years)'\n    END\nORDER BY claim_frequency_pct DESC",
+      "category": "Risk Assessment"
+    },
+    {
+      "question": "How do claim amounts vary by day of week and time of day?",
+      "sql_query": "SELECT \n    dd.day_of_week_name,\n    CASE \n        WHEN DATEPART(hour, fc.claim_date) BETWEEN 6 AND 11 THEN 'Morning (6-11 AM)'\n        WHEN DATEPART(hour, fc.claim_date) BETWEEN 12 AND 17 THEN 'Afternoon (12-5 PM)'\n        WHEN DATEPART(hour, fc.claim_date) BETWEEN 18 AND 23 THEN 'Evening (6-11 PM)'\n        ELSE 'Night (12-5 AM)'\n    END as time_period,\n    COUNT(*) as total_claims,\n    AVG(fc.claim_amount_total) as avg_claim_amount,\n    SUM(fc.claim_amount_total) as total_claim_amount\nFROM gold.fact_claims fc\nJOIN gold.dim_date dd ON fc.claim_date = dd.date_key\nGROUP BY dd.day_of_week_name, \n    CASE \n        WHEN DATEPART(hour, fc.claim_date) BETWEEN 6 AND 11 THEN 'Morning (6-11 AM)'\n        WHEN DATEPART(hour, fc.claim_date) BETWEEN 12 AND 17 THEN 'Afternoon (12-5 PM)'\n        WHEN DATEPART(hour, fc.claim_date) BETWEEN 18 AND 23 THEN 'Evening (6-11 PM)'\n        ELSE 'Night (12-5 AM)'\n    END\nORDER BY total_claim_amount DESC",
+      "category": "Claims Operations"
+    },
+    {
+      "question": "What is the total exposure and loss ratio by location?",
+      "sql_query": "SELECT \n    dl.borough,\n    dl.neighborhood,\n    COUNT(DISTINCT fc.policy_no) as total_policies,\n    SUM(fc.sum_insured) as total_exposure,\n    SUM(fc.claim_amount_total) as total_claims_amount,\n    SUM(fc.premium) as total_premiums,\n    (SUM(fc.claim_amount_total) / SUM(fc.premium)) as loss_ratio,\n    AVG(fc.claim_amount_total) as avg_claim_amount\nFROM gold.fact_claims fc\nJOIN gold.dim_location dl ON fc.location_id = dl.location_id\nGROUP BY dl.borough, dl.neighborhood\nHAVING COUNT(DISTINCT fc.policy_no) >= 10\nORDER BY loss_ratio DESC",
+      "category": "Financial Performance"
+    },
+    {
+      "question": "Show me telematics risk patterns and their correlation with claim outcomes",
+      "sql_query": "SELECT \n    ft.speed_risk_indicator,\n    AVG(ft.telematics_speed) as avg_speed,\n    AVG(ft.telematics_speed_std) as avg_speed_variation,\n    COUNT(*) as total_claims,\n    SUM(CASE WHEN fc.severity_category IN ('High', 'Medium-High') THEN 1 ELSE 0 END) as high_severity_count,\n    (SUM(CASE WHEN fc.severity_category IN ('High', 'Medium-High') THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) as high_severity_pct,\n    AVG(fc.claim_amount_total) as avg_claim_amount,\n    AVG(ft.accident_telematics_distance_miles) as avg_accident_distance\nFROM gold.fact_claims fc\nJOIN gold.fact_telematics ft ON fc.claim_no = ft.claim_no\nGROUP BY ft.speed_risk_indicator\nORDER BY high_severity_pct DESC",
+      "category": "Telematics & Risk Behavior"
+    }
+  ],
+  "metadata": {
+    "description": "Example queries for Insurance Claims Intelligence Data Agent",
+    "version": "1.0",
+    "created_date": "2025-09-11",
+    "data_source": "Microsoft Fabric Lakehouse - Gold Layer",
+    "schema": "gold",
+    "primary_tables": [
+      "fact_claims",
+      "dim_policy", 
+      "dim_vehicle",
+      "dim_location",
+      "dim_date",
+      "fact_telematics",
+      "dim_risk"
+    ]
+  }
+}

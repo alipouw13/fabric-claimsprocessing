@@ -2,6 +2,7 @@
 # This notebook has been adapted from the original Databricks version
 # Available at https://github.com/databricks-industry-solutions/smart-claims
 # NOTE: Attach your lakehouse to this notebook to ensure no errors
+# NOTE: Ensure you create the right folders to the files section of the lakehouse (Claims, Accident, Policy, iot) per the paths below
 
 # COMMAND ----------
 

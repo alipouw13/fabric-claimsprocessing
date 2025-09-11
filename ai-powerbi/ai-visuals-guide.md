@@ -12,25 +12,25 @@ The Key Influencers visual helps you understand what drives a metric up or down.
 ### Setup Instructions
 
 #### For Claim Amount Analysis:
-1. **Analyze**: Drag `claim_amount_total` to the "Analyze" field
+1. **Analyze**: Drag `risk_category` to the "Analyze" field
 2. **Explain By**: Add the following fields:
    - `severity_category`
    - `driver_age` (or `Driver Age Bucket`)
-   - `vehicle_make`
-   - `location_borough`
-   - `processing_flag`
-   - `speed_risk_indicator`
-   - `vehicle_age_group` (calculated field)
+   - `make` (vehicle make)
+   - `borough` (location)
+   - `neighborhood` (location)
+   - `processing_flag` (risk)
+   - `month`
 
 #### For High Severity Claims:
 1. **Analyze**: Drag `severity_category` to "Analyze"
 2. **Explain By**: Add:
    - `claim_amount_total`
    - `telematics_speed`
-   - `driver_age`
-   - `vehicle_make`
-   - `location_neighborhood`
-   - `accident_telematics_distance_miles`
+   - `driver_age` (or `Driver Age Bucket`)
+   - `make`
+   - `borough` (location)
+   - `neighborhood` (location)
 
 ### Key Insights to Look For:
 - **Top Influencers**: Which factors most increase claim amounts?
@@ -39,7 +39,7 @@ The Key Influencers visual helps you understand what drives a metric up or down.
 - **Geographic Patterns**: Which locations consistently drive higher claims?
 
 ### Best Practices:
-- Use categorical fields with reasonable cardinality (< 100 unique values)
+- Use categorical fields with reasonable cardinality (< 100 unique values) in the 'Analyze' section of the visual
 - Include both continuous and categorical variables
 - Filter out extreme outliers for clearer patterns
 - Use the "What if" feature to simulate scenarios
@@ -110,24 +110,16 @@ Natural language querying of your insurance data using conversational questions.
 - Use consistent naming conventions
 - Add field descriptions for better recognition
 
-## 4. Smart Narrative Visual
+## 4. Narrative Visual
 
 ### Purpose
 Automatically generates narrative insights about your data in natural language.
 
 ### Setup Instructions:
-1. Add Smart Narrative visual
-2. Connect to your main summary measures:
-   - Total Claims
-   - Total Claim Amount
-   - Average Claim Amount
-   - High Severity Claims %
-   - Processing Review %
+1. Ensure you have a Smart Narrative visual on the Location page
 
 ### Configuration:
-- **Values**: Add your key metrics
-- **Filters**: Apply relevant slicers for context
-- **Time Intelligence**: Include year-over-year comparisons
+- Ensure you have populated visuals on the Location page with data you want insights on
 
 ### What It Provides:
 - Automatic insights about trends
@@ -168,12 +160,11 @@ Automatically segment your claims data into meaningful groups.
 
 ### Implementation:
 ```python
-# This goes in a Python visual
 from sklearn.cluster import KMeans
 import pandas as pd
 
 # Select features for clustering
-features = ['claim_amount_total', 'severity', 'driver_age', 'telematics_speed']
+features = ['claim_amount_total', 'severity_category', 'driver_age', 'driver_age']
 df_cluster = dataset[features].fillna(dataset[features].median())
 
 # Standardize features
@@ -187,7 +178,7 @@ dataset['cluster'] = kmeans.fit_predict(features_scaled)
 
 # Visualize clusters
 import matplotlib.pyplot as plt
-plt.scatter(dataset['claim_amount_total'], dataset['severity'], c=dataset['cluster'])
+plt.scatter(dataset['claim_amount_total'], dataset['severity_category'], c=dataset['cluster'])
 plt.xlabel('Claim Amount')
 plt.ylabel('Severity')
 plt.title('Claims Clustering')

@@ -1,6 +1,9 @@
 # Python Visual Script for Power BI - Insurance Claims Analysis
 # This script demonstrates advanced analytics and visualizations for insurance claims data
 # Use this in Power BI's Python visual with the insurance claims dataset
+# make sure you pip install necessary packages in your Python environment in your command prompt: 
+# pip install pandas numpy matplotlib seaborn scikit-learn scipy
+# Reference: https://learn.microsoft.com/en-us/power-bi/connect-data/service-python-packages-support
 
 import pandas as pd
 import numpy as np
@@ -8,29 +11,46 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
-import warnings
-warnings.filterwarnings('ignore')
+
+# Handle warnings - not available in Power BI Python visuals
+try:
+    import warnings
+    warnings.filterwarnings('ignore')
+except ImportError:
+    # warnings package not available in Power BI Python visuals
+    pass
 
 # Set style for better visualizations
 plt.style.use('seaborn-v0_8')
 sns.set_palette("husl")
 
-# Assume 'dataset' is the Power BI dataset passed to Python
-# Required columns: claim_amount_total, severity, driver_age, telematics_speed, 
-# vehicle_age, location_borough, processing_flag, claim_date
+# Dataset structure: claim_amount_total, severity_category, risk_category, processing_flag, 
+# claim_date, claim_amount_vehicle, claim_amount_property, claim_amount_injury
 
 def create_claims_analysis_dashboard():
     """
     Creates a comprehensive claims analysis dashboard with multiple visualizations
     """
     
+    # Ensure dataset is available - in Power BI this should be the connected dataset
+    try:
+        df = dataset.copy()
+    except NameError:
+        print("Error: 'dataset' variable not found. This script should be run in Power BI with connected data.")
+        return
+    
     # Data preparation
-    df = dataset.copy()
+    df = df.drop_duplicates()
     
     # Calculate derived metrics
-    df['vehicle_age'] = 2025 - df['model_year'] if 'model_year' in df.columns else np.random.randint(1, 15, len(df))
     df['claim_month'] = pd.to_datetime(df['claim_date']).dt.month if 'claim_date' in df.columns else np.random.randint(1, 13, len(df))
+    df['claim_year'] = pd.to_datetime(df['claim_date']).dt.year if 'claim_date' in df.columns else 2024
     df['log_claim_amount'] = np.log1p(df['claim_amount_total'])
+    
+    # Calculate percentage breakdowns of claim components
+    df['vehicle_pct'] = (df['claim_amount_vehicle'] / df['claim_amount_total'] * 100).fillna(0)
+    df['property_pct'] = (df['claim_amount_property'] / df['claim_amount_total'] * 100).fillna(0)
+    df['injury_pct'] = (df['claim_amount_injury'] / df['claim_amount_total'] * 100).fillna(0)
     
     # Create figure with subplots
     fig, axes = plt.subplots(2, 3, figsize=(20, 12))
@@ -59,10 +79,8 @@ def create_claims_analysis_dashboard():
     # 2. Risk Segmentation using K-Means Clustering
     ax2 = axes[0, 1]
     
-    # Prepare features for clustering
-    features = ['claim_amount_total', 'severity', 'driver_age']
-    if 'telematics_speed' in df.columns:
-        features.append('telematics_speed')
+    # Prepare features for clustering using available columns
+    features = ['claim_amount_total', 'vehicle_pct', 'property_pct', 'injury_pct']
     
     # Handle missing values and standardize
     df_cluster = df[features].fillna(df[features].median())
@@ -73,11 +91,11 @@ def create_claims_analysis_dashboard():
     kmeans = KMeans(n_clusters=4, random_state=42, n_init=10)
     df['risk_cluster'] = kmeans.fit_predict(features_scaled)
     
-    # Create scatter plot
-    scatter = ax2.scatter(df['claim_amount_total'], df['severity'], 
+    # Create scatter plot using claim amount vs injury percentage
+    scatter = ax2.scatter(df['claim_amount_total'], df['injury_pct'], 
                          c=df['risk_cluster'], cmap='viridis', alpha=0.6, s=30)
     ax2.set_xlabel('Claim Amount ($)')
-    ax2.set_ylabel('Severity Score')
+    ax2.set_ylabel('Injury Component (%)')
     ax2.set_title('Risk Segmentation\n(ML-based Clustering)')
     plt.colorbar(scatter, ax=ax2, label='Risk Cluster')
     
@@ -236,20 +254,43 @@ def create_statistical_analysis():
         ax2.set_title('Claim Amount by Severity\n(Box Plot Analysis)')
         ax2.tick_params(axis='x', rotation=45)
     
-    # 3. Outlier Detection
+    # 3. Severity Analysis by Risk Category
     ax3 = axes[1, 0]
-    from scipy import stats
-    z_scores = np.abs(stats.zscore(df['claim_amount_total']))
-    threshold = 3
-    outliers = df[z_scores > threshold]
     
-    ax3.scatter(df.index, df['claim_amount_total'], alpha=0.6, s=20, label='Normal Claims')
-    ax3.scatter(outliers.index, outliers['claim_amount_total'], 
-               color='red', s=30, label=f'Outliers (n={len(outliers)})')
-    ax3.set_xlabel('Claim Index')
-    ax3.set_ylabel('Claim Amount ($)')
-    ax3.set_title('Outlier Detection\n(Z-score > 3)')
-    ax3.legend()
+    # Create severity analysis based on available columns
+    if 'severity_category' in df.columns and 'risk_category' in df.columns:
+        # Create cross-tabulation for heatmap
+        severity_risk = pd.crosstab(df['severity_category'], df['risk_category'], 
+                                   values=df['claim_amount_total'], aggfunc='mean')
+        
+        # Create heatmap if enough data
+        if severity_risk.shape[0] > 1 and severity_risk.shape[1] > 1:
+            sns.heatmap(severity_risk, annot=True, fmt='.0f', cmap='Reds', ax=ax3)
+            ax3.set_title('Average Claim Amount\nby Severity and Risk Category')
+            ax3.set_xlabel('Risk Category')
+            ax3.set_ylabel('Severity Category')
+        else:
+            # Fallback to simple bar chart
+            severity_avg = df.groupby('severity_category')['claim_amount_total'].mean()
+            severity_avg.plot(kind='bar', ax=ax3, color='lightcoral')
+            ax3.set_title('Average Claim Amount by Severity')
+            ax3.set_xlabel('Severity Category')
+            ax3.set_ylabel('Average Claim Amount ($)')
+            plt.setp(ax3.get_xticklabels(), rotation=45)
+    else:
+        # Outlier detection if no categorical data available
+        from scipy import stats
+        z_scores = np.abs(stats.zscore(df['claim_amount_total']))
+        threshold = 3
+        outliers = df[z_scores > threshold]
+        
+        ax3.scatter(df.index, df['claim_amount_total'], alpha=0.6, s=20, label='Normal Claims')
+        ax3.scatter(outliers.index, outliers['claim_amount_total'], 
+                   color='red', s=30, label=f'Outliers (n={len(outliers)})')
+        ax3.set_xlabel('Claim Index')
+        ax3.set_ylabel('Claim Amount ($)')
+        ax3.set_title('Outlier Detection\n(Z-score > 3)')
+        ax3.legend()
     
     # 4. Distribution Comparison
     ax4 = axes[1, 1]
@@ -273,13 +314,17 @@ try:
     print("Dashboard created successfully!")
 except Exception as e:
     print(f"Error creating dashboard: {str(e)}")
-    # Fallback simple visualization
-    plt.figure(figsize=(10, 6))
-    dataset['claim_amount_total'].hist(bins=30, alpha=0.7)
-    plt.title('Claims Amount Distribution')
-    plt.xlabel('Claim Amount ($)')
-    plt.ylabel('Frequency')
-    plt.show()
+    # Fallback simple visualization using dataset variable
+    try:
+        plt.figure(figsize=(10, 6))
+        dataset['claim_amount_total'].hist(bins=30, alpha=0.7)
+        plt.title('Claims Amount Distribution')
+        plt.xlabel('Claim Amount ($)')
+        plt.ylabel('Frequency')
+        plt.show()
+    except:
+        # If dataset is not defined, show message
+        print("Please ensure the dataset is properly loaded in Power BI")
 
 # Optional: Create statistical analysis
-# create_statistical_analysis()
+create_statistical_analysis()

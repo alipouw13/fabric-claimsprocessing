@@ -62,7 +62,7 @@ root/
   README.md                                   (this file)
 ```
 
-## 4. Data Layers (Medallion Pattern)
+## 4. Data Layers (Medallion)
 | Layer  | Purpose | Sample Tables |
 |--------|---------|---------------|
 | Bronze | Raw landed, minimal schema normalization | bronze_claim, bronze_policy, bronze_accident, bronze_telematics, bronze_images |
